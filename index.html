@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Adasynek's Portfolio</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -233,7 +236,7 @@ $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.togg
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false;
-audio.volume=0.1; // 30% volume
+audio.volume=0.1; // 10% volume (0.3 = 30%)
 const probe=async src=>{
   try{const r=await fetch(src,{method:"HEAD"});return r.ok}
   catch(e){return new Promise(res=>{const a=new Audio(),t=setTimeout(()=>res(false),4000);
