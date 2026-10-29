@@ -87,12 +87,33 @@ body.nocrt #crt{display:none}
 
 @media (max-width:560px){.win{left:4vw!important;top:70px!important}#task{height:56px}}
 @media (prefers-reduced-motion:reduce){#crt,#disc,.note{animation:none!important}}
+
+/* tv power-on */
+html,body{background:#000}
+#screen{position:fixed;inset:0}
+#screen.off{clip-path:inset(50% 50% 50% 50%)}
+#screen.on{animation:tvon 1.4s cubic-bezier(.3,.7,.2,1)}
+#screen.on::after{content:"";position:absolute;inset:0;z-index:100;pointer-events:none;background:#fff1d6;animation:tvflash 1.4s ease-out forwards}
+@keyframes tvon{
+  0%{clip-path:inset(50% 50% 50% 50%)}
+  12%{clip-path:inset(49.6% 46% 49.6% 46%)}
+  42%{clip-path:inset(49.6% 0 49.6% 0)}
+  88%{clip-path:inset(0 0 0 0)}
+  100%{clip-path:inset(0 0 0 0)}
+}
+@keyframes tvflash{0%,42%{opacity:1}100%{opacity:0}}
+#standby{position:fixed;inset:0;z-index:60;background:#000;display:none;place-items:center;color:var(--paper-2);text-align:center}
+body.standby #standby{display:grid}
+#standby p{display:flex;align-items:center;gap:12px;opacity:.8;animation:blink 1.6s steps(1) infinite}
+#standby i{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red)}
+@keyframes blink{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){#screen.on,#screen.on::after,#standby p{animation:none!important}}
 </style>
 </head>
 <body>
 
+<div id="screen" class="off">
 <video id="wall" src="wallpaper.mp4" autoplay muted loop playsinline preload="auto"></video>
-<div id="crt"></div>
 
 <button class="icon" data-open="anims" aria-label="Open anims folder">
   <svg viewBox="0 0 54 54" fill="none" stroke="#2a190e" stroke-width="3" shape-rendering="crispEdges">
@@ -145,6 +166,9 @@ body.nocrt #crt{display:none}
   <audio id="audio" preload="none"></audio>
 </div>
 
+</div>
+<div id="crt"></div>
+<div id="standby"><p><i></i>click anywhere to turn on</p></div>
 <script>
 // ---- MUSIC ----
 // 1. Put your mp3s in a folder called "music" and name them music1.mp3, music2.mp3, music3.mp3 ...
@@ -187,6 +211,7 @@ $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.togg
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0;
+audio.volume=0.3; // 30% volume (change 0.3 to 0.5 for 50%, etc.)
 const probe=async src=>{
   try{const r=await fetch(src,{method:"HEAD"});return r.ok}   // works on GitHub Pages
   catch(e){                                                   // fallback (e.g. opened from a folder)
@@ -205,7 +230,8 @@ async function findTracks(){
   if(!tracks.length){$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3"}
 }
 function show(n){i=(n+tracks.length)%tracks.length;const t=tracks[i];$("#tName").textContent=t.title;$("#tArtist").textContent=t.artist}
-function play(n){if(!tracks.length)return;show(n);audio.src=tracks[i].src;audio.play().catch(()=>{})}
+function start(n){show(n);audio.src=tracks[i].src;return audio.play()}
+function play(n){if(!tracks.length)return;start(n).catch(()=>{})}
 function toggle(){
   if(!tracks.length)return;
   if(!audio.src)return play(0);
@@ -216,7 +242,28 @@ audio.addEventListener("pause",()=>box.classList.remove("on"));
 audio.addEventListener("ended",()=>play(i+1));
 $("#disc").addEventListener("click",toggle);
 $("#next").addEventListener("click",()=>play(i+1));
-findTracks();
+
+// power on: try autoplay; if the browser blocks sound, wait for one click
+let decided=false,goFn=null;
+function powerOn(){
+  if(decided)return;decided=true;
+  document.body.classList.remove("standby");
+  if(goFn)["pointerdown","keydown"].forEach(ev=>removeEventListener(ev,goFn));
+  $("#screen").classList.replace("off","on");
+}
+function standby(){
+  if(decided)return;
+  document.body.classList.add("standby");
+  goFn=()=>{const was=decided;powerOn();if(!was&&tracks.length)start(0).catch(()=>{})};
+  ["pointerdown","keydown"].forEach(ev=>addEventListener(ev,goFn));
+}
+async function boot(){
+  await findTracks();
+  if(!tracks.length)return powerOn();
+  try{await start(0);powerOn()}catch(e){standby()}
+}
+setTimeout(standby,3500);
+boot();
 </script>
 </body>
 </html>
