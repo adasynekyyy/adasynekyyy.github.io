@@ -175,9 +175,9 @@ const projects=[
 
 // ---- MUSIC: put mp3s in a "music" folder named music1.mp3, music2.mp3 ... then fill in each title/artist ----
 const info={
-  1:{title:"Song name 1",artist:"Artist 1"},
-  2:{title:"Song name 2",artist:"Artist 2"},
-  3:{title:"Song name 3",artist:"Artist 3"}
+  1:{title:"ihaveyouandthatsreallyallineed",artist:"remara"},
+  2:{title:"眠れない",artist:"kiyosumi"},
+  3:{title:"825 hp",artist:"Exodia"}
 };
 
 const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
@@ -233,7 +233,7 @@ $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.togg
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false;
-audio.volume=0.3; // 30% volume
+audio.volume=0.1; // 30% volume
 const probe=async src=>{
   try{const r=await fetch(src,{method:"HEAD"});return r.ok}
   catch(e){return new Promise(res=>{const a=new Audio(),t=setTimeout(()=>res(false),4000);
