@@ -60,7 +60,7 @@ body.nocrt #crt{display:none}
 
 /* taskbar */
 #task{position:fixed;left:0;right:0;bottom:0;height:64px;z-index:20;
-  background:transparent;border-top:3px solid rgba(217,131,58,.55);display:flex;align-items:center;gap:10px;padding:0 16px}
+  background:var(--dusk);border-top:3px solid var(--orange-d);display:flex;align-items:center;gap:10px;padding:0 16px}
 .dot{width:26px;height:26px;border-radius:50%;border:3px solid var(--ink);box-shadow:inset -3px -3px 0 rgba(0,0,0,.25)}
 .dot.r{background:var(--red)}.dot.y{background:var(--yellow)}
 .dot:hover{transform:translateY(-2px);box-shadow:0 0 12px var(--glow),inset -3px -3px 0 rgba(0,0,0,.25)}
@@ -68,7 +68,7 @@ body.nocrt #crt{display:none}
 
 /* music widget */
 #music{position:fixed;right:0;bottom:0;z-index:30;width:min(360px,100vw);height:92px;
-  background:rgba(58,34,20,.35);backdrop-filter:blur(3px);border:3px solid rgba(217,131,58,.55);border-right:0;border-bottom:0;
+  background:var(--dusk);border:3px solid var(--orange-d);border-right:0;border-bottom:0;
   border-top-left-radius:40px 28px;display:flex;align-items:center;gap:14px;padding:0 18px 0 16px;color:var(--paper)}
 #disc{flex:none;width:62px;height:62px;border-radius:50%;border:3px solid var(--paper);
   background:radial-gradient(circle,var(--dusk) 0 9px,var(--paper) 10px 12px,var(--orange) 13px 24px,var(--orange-d) 25px);
@@ -187,11 +187,17 @@ $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.togg
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0;
-const probe=src=>new Promise(r=>{const a=new Audio();a.preload="metadata";a.onloadedmetadata=()=>r(true);a.onerror=()=>r(false);a.src=src});
+const probe=async src=>{
+  try{const r=await fetch(src,{method:"HEAD"});return r.ok}   // works on GitHub Pages
+  catch(e){                                                   // fallback (e.g. opened from a folder)
+    return new Promise(res=>{const a=new Audio();const t=setTimeout(()=>res(false),4000);
+      a.onloadedmetadata=a.oncanplay=()=>{clearTimeout(t);res(true)};a.onerror=()=>{clearTimeout(t);res(false)};a.src=src});
+  }
+};
 async function findTracks(){
   for(let n=1;n<=100;n++){
     let src=null;
-    for(const f of [`music${n}.mp3`,`music ${n}.mp3`]){const u="music/"+encodeURI(f);if(await probe(u)){src=u;break}}
+    for(const f of [`music${n}.mp3`,`music ${n}.mp3`]){const u="music/"+encodeURI(f);if(await probe(u)){src=u;break}else if(n===1)console.log("not found:",u)}
     if(!src)break;
     tracks.push({src,...(info[n]||{title:"music "+n,artist:"unknown artist"})});
     if(tracks.length===1)show(0);
