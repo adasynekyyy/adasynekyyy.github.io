@@ -60,7 +60,7 @@ body.nocrt #crt{display:none}
 
 /* taskbar */
 #task{position:fixed;left:0;right:0;bottom:0;height:64px;z-index:20;
-  background:var(--dusk);border-top:3px solid var(--orange-d);display:flex;align-items:center;gap:10px;padding:0 16px}
+  background:transparent;border-top:3px solid rgba(217,131,58,.55);display:flex;align-items:center;gap:10px;padding:0 16px}
 .dot{width:26px;height:26px;border-radius:50%;border:3px solid var(--ink);box-shadow:inset -3px -3px 0 rgba(0,0,0,.25)}
 .dot.r{background:var(--red)}.dot.y{background:var(--yellow)}
 .dot:hover{transform:translateY(-2px);box-shadow:0 0 12px var(--glow),inset -3px -3px 0 rgba(0,0,0,.25)}
@@ -68,7 +68,7 @@ body.nocrt #crt{display:none}
 
 /* music widget */
 #music{position:fixed;right:0;bottom:0;z-index:30;width:min(360px,100vw);height:92px;
-  background:var(--dusk);border:3px solid var(--orange-d);border-right:0;border-bottom:0;
+  background:rgba(58,34,20,.35);backdrop-filter:blur(3px);border:3px solid rgba(217,131,58,.55);border-right:0;border-bottom:0;
   border-top-left-radius:40px 28px;display:flex;align-items:center;gap:14px;padding:0 18px 0 16px;color:var(--paper)}
 #disc{flex:none;width:62px;height:62px;border-radius:50%;border:3px solid var(--paper);
   background:radial-gradient(circle,var(--dusk) 0 9px,var(--paper) 10px 12px,var(--orange) 13px 24px,var(--orange-d) 25px);
@@ -91,7 +91,7 @@ body.nocrt #crt{display:none}
 </head>
 <body>
 
-<video id="wall" src="wallpaper.mp4" autoplay muted loop playsinline></video>
+<video id="wall" src="wallpaper.mp4" autoplay muted loop playsinline preload="auto"></video>
 <div id="crt"></div>
 
 <button class="icon" data-open="anims" aria-label="Open anims folder">
@@ -125,7 +125,7 @@ body.nocrt #crt{display:none}
   <div class="bar"><b>contact</b><button class="x" data-close aria-label="Close">x</button></div>
   <div class="body">
     <p>Want to work together or just say hi?</p>
-    <a class="mail" href="mailto:you@example.com">Discord: adasynek</a>
+    <span class="mail">Discord: adasynek</span>
   </div>
 </section>
 
@@ -146,15 +146,24 @@ body.nocrt #crt{display:none}
 </div>
 
 <script>
-// ---- your music: put mp3 files in a /music folder and list them here ----
-const tracks=[
-  {title:"Music name",artist:"Artist",src:"music/track1.mp3"},
-  {title:"Music name 2",artist:"Artist",src:"music/track2.mp3"}
-];
+// ---- MUSIC ----
+// 1. Put your mp3s in a folder called "music" and name them music1.mp3, music2.mp3, music3.mp3 ...
+// 2. Add a line below for each one with its title and artist. Number = the number in the file name.
+const info={
+  1:{title:"Song name 1",artist:"Artist 1"},
+  2:{title:"Song name 2",artist:"Artist 2"},
+  3:{title:"Song name 3",artist:"Artist 3"}
+};
 
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 let z=10;
 const front=w=>w.style.zIndex=++z;
+
+// make sure the wallpaper plays (some browsers block autoplay until a first click)
+const wall=$("#wall");wall.muted=true;
+const go=()=>wall.play().catch(()=>{});
+go();["pointerdown","keydown","touchstart"].forEach(ev=>addEventListener(ev,go,{once:true}));
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)go()});
 
 // windows
 $$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);w.classList.add("open");front(w)}));
@@ -176,16 +185,32 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape"){const o=$$(".win.op
 // crt toggle
 $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.toggle("nocrt");e.currentTarget.setAttribute("aria-pressed",!off)});
 
-// music
-const audio=$("#audio"),box=$("#music");let i=0;
-function load(n){i=(n+tracks.length)%tracks.length;const t=tracks[i];audio.src=t.src;$("#tName").textContent=t.title;$("#tArtist").textContent=t.artist}
-function toggle(){ if(!audio.src)load(0); audio.paused?audio.play().catch(()=>{}):audio.pause() }
+// music: finds music1.mp3, music2.mp3 ... in /music until one is missing
+const audio=$("#audio"),box=$("#music");let tracks=[],i=0;
+const probe=src=>new Promise(r=>{const a=new Audio();a.preload="metadata";a.onloadedmetadata=()=>r(true);a.onerror=()=>r(false);a.src=src});
+async function findTracks(){
+  for(let n=1;n<=100;n++){
+    let src=null;
+    for(const f of [`music${n}.mp3`,`music ${n}.mp3`]){const u="music/"+encodeURI(f);if(await probe(u)){src=u;break}}
+    if(!src)break;
+    tracks.push({src,...(info[n]||{title:"music "+n,artist:"unknown artist"})});
+    if(tracks.length===1)show(0);
+  }
+  if(!tracks.length){$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3"}
+}
+function show(n){i=(n+tracks.length)%tracks.length;const t=tracks[i];$("#tName").textContent=t.title;$("#tArtist").textContent=t.artist}
+function play(n){if(!tracks.length)return;show(n);audio.src=tracks[i].src;audio.play().catch(()=>{})}
+function toggle(){
+  if(!tracks.length)return;
+  if(!audio.src)return play(0);
+  audio.paused?audio.play().catch(()=>{}):audio.pause();
+}
 audio.addEventListener("play",()=>box.classList.add("on"));
 audio.addEventListener("pause",()=>box.classList.remove("on"));
-audio.addEventListener("ended",()=>{load(i+1);audio.play()});
+audio.addEventListener("ended",()=>play(i+1));
 $("#disc").addEventListener("click",toggle);
-$("#next").addEventListener("click",()=>{load(i+1);audio.play().catch(()=>{})});
-load(0);
+$("#next").addEventListener("click",()=>play(i+1));
+findTracks();
 </script>
 </body>
 </html>
