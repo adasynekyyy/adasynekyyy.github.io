@@ -60,7 +60,7 @@ body.nocrt #crt{display:none}
 .x:hover{background:var(--red);color:var(--paper)}
 .body{padding:16px;max-height:min(64vh,540px);overflow:auto;background:var(--grain),var(--paper);box-shadow:inset 0 0 0 3px var(--paper2)}
 .body p{line-height:1.7;max-width:60ch}.body p+p{margin-top:10px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;padding:2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:16px;padding:2px}
 .card{display:block;text-align:left;border:2px solid var(--ink);background:var(--paper2);transition:transform .12s,box-shadow .12s}
 .card:hover,.card:focus-visible{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--ink)}
 .thumb{position:relative;aspect-ratio:16/9;background:var(--deep);border-bottom:2px solid var(--ink);overflow:hidden}
@@ -121,7 +121,7 @@ body.nocrt #crt{display:none}
   <span>anims</span>
 </button>
 
-<section class="win" id="anims" style="top:80px;left:130px" aria-label="Anims">
+<section class="win" id="anims" style="top:80px;left:130px;width:min(700px,94vw)" aria-label="Anims">
   <div class="bar"><b>anims</b><button class="x" data-close aria-label="Close">x</button></div>
   <div class="body"><div class="grid" id="grid"></div></div>
 </section>
@@ -166,15 +166,19 @@ body.nocrt #crt{display:none}
 <script>
 // ---- ANIMATIONS: add yours here. Use youtube (video id), vimeo (video id) or video (mp4 path in your repo) ----
 // Optional: thumb:"anims/cover1.jpg". A project with no video shows a NO SIGNAL card.
+const SLOTS=12; // total cards in the anims window; unused ones show NO SIGNAL
 const projects=[
-  {title:"Animation title 1",year:"2026"},
-  {title:"Animation title 2",year:"2026"},
-  {title:"Animation title 3",year:"2025"},
-  {title:"Animation title 4",year:"2025"}
-  // {title:"My animation",year:"2026",youtube:"dQw4w9WgXcQ"},
-  // {title:"My animation",year:"2026",vimeo:"123456789"},
-  // {title:"My animation",year:"2026",video:"anims/anim1.mp4"},
+  {title:"Dark Shadow throw",year:"2026",video:"anims/dark-shadow-throw-anim.mp4"},
+  {title:"Fighting stance",year:"2026",video:"anims/fighting-stance.mp4"},
+  {title:"Idle, M1s, critical",year:"2026",video:"anims/idle-m1s-critical.mp4"},
+  {title:"Katana quickdraw",year:"2026",video:"anims/katana-quickdraw.mp4"},
+  {title:"Screamer idle",year:"2026",video:"anims/screamer-idle-animation.mp4"},
+  {title:"Shopkeeper wakeup",year:"2026",video:"anims/shopkeeper-wakeup.mp4"},
+  {title:"Zombie idle",year:"2026",video:"anims/zombie-idle.mp4"}
+  // add new ones above this line (put a comma after the line before it):
+  // {title:"My animation",year:"2026",video:"anims/my-file.mp4"},
 ];
+while(projects.length<SLOTS)projects.push({title:"Empty slot",year:"coming soon"});
 
 // ---- MUSIC: put mp3s in a "music" folder named music1.mp3, music2.mp3 ... then fill in each title/artist ----
 const info={
