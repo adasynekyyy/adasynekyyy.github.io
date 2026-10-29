@@ -110,6 +110,14 @@ body.nocrt #crt{display:none}
 @media (max-width:600px){:root{--bar:52px}.win{left:3vw!important;top:64px!important}
  #music{bottom:var(--bar);width:100%;height:84px;border-left:0}#music::before{display:none}.note{display:none}}
 @media (prefers-reduced-motion:reduce){#screen.on,#screen.on::after,#screen.on .icon,#screen.on #task,#screen.on #music,#crt,#disc,.note,.win.open,.nosig span{animation:none!important}#screen.on::after{display:none}}
+
+/* loading screen (shown until everything is ready) */
+#boot{position:fixed;inset:0;z-index:80;display:grid;place-content:center;justify-items:center;gap:14px;background:#000;color:var(--paper2)}
+#boot.hide{display:none}
+#boot i{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);animation:blink 1.6s steps(1) infinite}
+#boot b{display:block;width:180px;height:10px;border:2px solid var(--paper2)}
+#boot u{display:block;height:100%;width:0;background:var(--orange);transition:width .25s}
+@media (prefers-reduced-motion:reduce){#boot i{animation:none}}
 </style>
 </head>
 <body>
@@ -162,6 +170,7 @@ body.nocrt #crt{display:none}
 </div>
 </div>
 <div id="crt"></div>
+<div id="boot"><i></i><span>loading</span><b><u id="bootBar"></u></b></div>
 
 <script>
 // ---- ANIMATIONS: add yours here. Use youtube (video id), vimeo (video id) or video (mp4 path in your repo) ----
@@ -257,7 +266,7 @@ async function findTracks(){
   if(!tracks.length){$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3"}
 }
 function show(n){i=(n+tracks.length)%tracks.length;const t=tracks[i];$("#tName").textContent=t.title;$("#tArtist").textContent=t.artist}
-function start(n){show(n);audio.src=tracks[i].src;return audio.play()}
+function start(n){show(n);if(audio.getAttribute("src")!==tracks[i].src)audio.src=tracks[i].src;return audio.play()}
 function play(n){if(tracks.length)start(n).catch(()=>{})}
 function toggle(){
   if(!tracks.length)return;
@@ -274,16 +283,27 @@ $("#next").addEventListener("click",()=>play(i+1));
 function kick(e){if(started||!tracks.length||e.target.closest("#music"))return;play(0)}
 ["pointerdown","keydown"].forEach(ev=>addEventListener(ev,kick));
 
-// boot: the TV turns on by itself once the wallpaper is ready
+// boot: wait until everything is loaded (page, fonts, wallpaper, first song), then the TV turns on
+const once=(el,...evs)=>new Promise(r=>evs.forEach(ev=>el.addEventListener(ev,r,{once:true})));
+const setPct=p=>$("#bootBar").style.width=Math.min(100,p)+"%";
+wall.addEventListener("progress",()=>{if(wall.duration&&wall.buffered.length)setPct(wall.buffered.end(wall.buffered.length-1)/wall.duration*90)});
 async function boot(){
-  const found=findTracks();
-  await Promise.all([
-    new Promise(r=>{wall.readyState>=3?r():wall.addEventListener("canplay",r,{once:true});setTimeout(r,2500)}),
+  const loaded=Promise.all([
+    document.readyState==="complete"||once(window,"load"),
+    document.fonts&&document.fonts.ready,
+    wall.readyState>=4||once(wall,"canplaythrough","error"),
+    findTracks().then(()=>{
+      if(!tracks.length)return;
+      audio.preload="auto";audio.src=tracks[0].src;
+      return audio.readyState>=3||once(audio,"canplay","error");
+    }),
     new Promise(r=>setTimeout(r,500))
   ]);
+  await Promise.race([loaded,new Promise(r=>setTimeout(r,12000))]); // never hang forever
+  setPct(100);
+  $("#boot").classList.add("hide");
   wall.play().catch(()=>{});
   $("#screen").classList.replace("off","on");
-  await found;
   if(tracks.length&&!started)start(0).catch(()=>{});
 }
 boot();
