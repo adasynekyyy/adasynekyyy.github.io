@@ -211,7 +211,7 @@ $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.togg
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0;
-audio.volume=0.3; // 30% volume (change 0.3 to 0.5 for 50%, etc.)
+audio.volume=0.1; // 30% volume (change 0.3 to 0.5 for 50%, etc.)
 const probe=async src=>{
   try{const r=await fetch(src,{method:"HEAD"});return r.ok}   // works on GitHub Pages
   catch(e){                                                   // fallback (e.g. opened from a folder)
