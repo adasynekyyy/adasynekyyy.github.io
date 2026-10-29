@@ -1,13 +1,191 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>My Website</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ada Synek – Animation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#2a190e; --paper:#f0d9b0; --paper-2:#e4c18a; --orange:#d9833a; --orange-d:#a85a22;
+  --dusk:#3a2214; --red:#c8402a; --yellow:#e8b83a; --glow:rgba(255,170,90,.35);
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;overflow:hidden;background:var(--dusk);color:var(--ink);
+  font-family:"DotGothic16","MS Gothic",ui-monospace,monospace;font-size:16px}
+button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+
+/* wallpaper + crt */
+#wall{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+#crt{position:fixed;inset:0;z-index:50;pointer-events:none;
+  background:
+   repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px),
+   radial-gradient(ellipse at center,transparent 55%,rgba(30,12,2,.55) 100%),
+   linear-gradient(rgba(217,131,58,.10),rgba(217,131,58,.10));
+  animation:flick 6s steps(1) infinite}
+body.nocrt #crt{display:none}
+@keyframes flick{0%,96%,100%{opacity:1}97%{opacity:.82}98%{opacity:1}99%{opacity:.9}}
+
+/* desktop icon */
+.icon{position:fixed;top:22px;left:24px;z-index:5;display:grid;justify-items:center;gap:6px;
+  width:92px;padding:8px 4px;color:var(--paper);text-shadow:0 2px 0 rgba(30,12,2,.8)}
+.icon:hover,.icon:focus-visible{background:rgba(217,131,58,.35)}
+.icon svg{width:54px;height:54px}
+
+/* windows */
+.win{position:fixed;z-index:10;width:min(560px,92vw);top:90px;left:130px;background:var(--paper);
+  border:3px solid var(--ink);box-shadow:6px 6px 0 rgba(30,12,2,.65);display:none}
+.win.open{display:block}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 8px 6px 12px;
+  background:var(--orange);border-bottom:3px solid var(--ink);cursor:grab;user-select:none;touch-action:none}
+.bar:active{cursor:grabbing}
+.bar b{font-weight:400;letter-spacing:.06em}
+.x{width:24px;height:24px;background:var(--paper);border:2px solid var(--ink);line-height:1}
+.x:hover{background:var(--red);color:var(--paper)}
+.body{padding:16px;max-height:min(62vh,520px);overflow:auto}
+.body p{line-height:1.6;max-width:60ch}
+.body p+p{margin-top:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
+.card{border:2px solid var(--ink);background:var(--paper-2)}
+.thumb{aspect-ratio:16/9;background:var(--dusk);display:grid;place-items:center;color:var(--paper-2);
+  border-bottom:2px solid var(--ink);overflow:hidden}
+.thumb iframe,.thumb video{width:100%;height:100%;border:0;object-fit:cover}
+.card h3{font-weight:400;font-size:15px;padding:8px 10px 2px}
+.card small{display:block;padding:0 10px 9px;color:var(--orange-d)}
+.mail{display:inline-block;margin-top:12px;padding:6px 12px;background:var(--orange);border:2px solid var(--ink);color:var(--ink);text-decoration:none}
+.mail:hover{background:var(--yellow)}
+
+/* taskbar */
+#task{position:fixed;left:0;right:0;bottom:0;height:64px;z-index:20;
+  background:var(--dusk);border-top:3px solid var(--orange-d);display:flex;align-items:center;gap:10px;padding:0 16px}
+.dot{width:26px;height:26px;border-radius:50%;border:3px solid var(--ink);box-shadow:inset -3px -3px 0 rgba(0,0,0,.25)}
+.dot.r{background:var(--red)}.dot.y{background:var(--yellow)}
+.dot:hover{transform:translateY(-2px);box-shadow:0 0 12px var(--glow),inset -3px -3px 0 rgba(0,0,0,.25)}
+.dot[aria-pressed="true"]{outline:2px solid var(--paper);outline-offset:2px}
+
+/* music widget */
+#music{position:fixed;right:0;bottom:0;z-index:30;width:min(360px,100vw);height:92px;
+  background:var(--dusk);border:3px solid var(--orange-d);border-right:0;border-bottom:0;
+  border-top-left-radius:40px 28px;display:flex;align-items:center;gap:14px;padding:0 18px 0 16px;color:var(--paper)}
+#disc{flex:none;width:62px;height:62px;border-radius:50%;border:3px solid var(--paper);
+  background:radial-gradient(circle,var(--dusk) 0 9px,var(--paper) 10px 12px,var(--orange) 13px 24px,var(--orange-d) 25px);
+  animation:spin 3.2s linear infinite;animation-play-state:paused}
+#music.on #disc{animation-play-state:running}
+@keyframes spin{to{transform:rotate(360deg)}}
+.meta{min-width:0;flex:1;text-align:left}
+.meta strong{display:block;font-weight:400;border-bottom:2px solid var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meta span{display:block;color:var(--paper-2);font-size:14px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#next{padding:6px 8px;border:2px solid var(--paper-2)}
+#next:hover{background:var(--orange);color:var(--ink)}
+.note{position:absolute;top:-8px;left:70px;opacity:0;color:var(--yellow)}
+#music.on .note{animation:rise 2.4s ease-out infinite}
+#music.on .note+.note{left:92px;animation-delay:1.2s}
+@keyframes rise{0%{opacity:0;transform:translateY(14px)}25%{opacity:1}100%{opacity:0;transform:translateY(-26px) rotate(14deg)}}
+
+@media (max-width:560px){.win{left:4vw!important;top:70px!important}#task{height:56px}}
+@media (prefers-reduced-motion:reduce){#crt,#disc,.note{animation:none!important}}
+</style>
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <p>My first GitHub Pages site.</p>
+
+<video id="wall" src="wallpaper.mp4" autoplay muted loop playsinline></video>
+<div id="crt"></div>
+
+<button class="icon" data-open="anims" aria-label="Open anims folder">
+  <svg viewBox="0 0 54 54" fill="none" stroke="#2a190e" stroke-width="3" shape-rendering="crispEdges">
+    <path d="M5 13h16l4 5h24v28H5z" fill="#d9833a"/><path d="M5 22h44" /><path d="M12 28h12v10" stroke="#f0d9b0"/>
+  </svg>
+  <span>anims</span>
+</button>
+
+<!-- windows -->
+<section class="win" id="anims" style="top:90px;left:130px" aria-label="Anims">
+  <div class="bar"><b>anims</b><button class="x" data-close aria-label="Close">x</button></div>
+  <div class="body"><div class="grid">
+    <!-- Replace each .thumb content with a Vimeo/YouTube iframe or a <video> and edit the title -->
+    <article class="card"><div class="thumb">add video</div><h3>Animation title 1</h3><small>2026</small></article>
+    <article class="card"><div class="thumb">add video</div><h3>Animation title 2</h3><small>2026</small></article>
+    <article class="card"><div class="thumb">add video</div><h3>Animation title 3</h3><small>2025</small></article>
+    <article class="card"><div class="thumb">add video</div><h3>Animation title 4</h3><small>2025</small></article>
+  </div></div>
+</section>
+
+<section class="win" id="about" style="top:120px;left:190px" aria-label="About">
+  <div class="bar"><b>about</b><button class="x" data-close aria-label="Close">x</button></div>
+  <div class="body">
+    <p>Hi, I'm Ada. I make animations.</p>
+    <p>Write a few lines here about what you make, what you use, and what you like to animate.</p>
+  </div>
+</section>
+
+<section class="win" id="contact" style="top:150px;left:250px" aria-label="Contact">
+  <div class="bar"><b>contact</b><button class="x" data-close aria-label="Close">x</button></div>
+  <div class="body">
+    <p>Want to work together or just say hi?</p>
+    <a class="mail" href="mailto:you@example.com">you@example.com</a>
+  </div>
+</section>
+
+<!-- taskbar -->
+<nav id="task" aria-label="Taskbar">
+  <button class="dot r" data-open="about" aria-label="About"></button>
+  <button class="dot y" data-open="contact" aria-label="Contact"></button>
+  <button class="dot y" id="crtBtn" aria-pressed="true" aria-label="Toggle CRT effect"></button>
+</nav>
+
+<!-- music -->
+<div id="music">
+  <span class="note" aria-hidden="true">♪</span><span class="note" aria-hidden="true">♫</span>
+  <button id="disc" aria-label="Play or pause music"></button>
+  <div class="meta"><strong id="tName">Music name</strong><span id="tArtist">Artist</span></div>
+  <button id="next" aria-label="Next track">&gt;&gt;</button>
+  <audio id="audio" preload="none"></audio>
+</div>
+
+<script>
+// ---- your music: put mp3 files in a /music folder and list them here ----
+const tracks=[
+  {title:"Music name",artist:"Artist",src:"music/track1.mp3"},
+  {title:"Music name 2",artist:"Artist",src:"music/track2.mp3"}
+];
+
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+let z=10;
+const front=w=>w.style.zIndex=++z;
+
+// windows
+$$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);w.classList.add("open");front(w)}));
+$$("[data-close]").forEach(b=>b.addEventListener("click",()=>b.closest(".win").classList.remove("open")));
+$$(".win").forEach(w=>{
+  w.addEventListener("pointerdown",()=>front(w));
+  const bar=w.querySelector(".bar");
+  bar.addEventListener("pointerdown",e=>{
+    if(e.target.closest(".x"))return;
+    const r=w.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;
+    bar.setPointerCapture(e.pointerId);
+    const mv=ev=>{w.style.left=Math.max(0,Math.min(innerWidth-80,ev.clientX-dx))+"px";w.style.top=Math.max(0,Math.min(innerHeight-120,ev.clientY-dy))+"px"};
+    const up=()=>{bar.removeEventListener("pointermove",mv);bar.removeEventListener("pointerup",up)};
+    bar.addEventListener("pointermove",mv);bar.addEventListener("pointerup",up);
+  });
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){const o=$$(".win.open").sort((a,b)=>b.style.zIndex-a.style.zIndex)[0];o&&o.classList.remove("open")}});
+
+// crt toggle
+$("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.toggle("nocrt");e.currentTarget.setAttribute("aria-pressed",!off)});
+
+// music
+const audio=$("#audio"),box=$("#music");let i=0;
+function load(n){i=(n+tracks.length)%tracks.length;const t=tracks[i];audio.src=t.src;$("#tName").textContent=t.title;$("#tArtist").textContent=t.artist}
+function toggle(){ if(!audio.src)load(0); audio.paused?audio.play().catch(()=>{}):audio.pause() }
+audio.addEventListener("play",()=>box.classList.add("on"));
+audio.addEventListener("pause",()=>box.classList.remove("on"));
+audio.addEventListener("ended",()=>{load(i+1);audio.play()});
+$("#disc").addEventListener("click",toggle);
+$("#next").addEventListener("click",()=>{load(i+1);audio.play().catch(()=>{})});
+load(0);
+</script>
 </body>
 </html>
