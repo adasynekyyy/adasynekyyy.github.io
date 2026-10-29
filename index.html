@@ -8,130 +8,124 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=swap" rel="stylesheet">
 <style>
-:root{
-  --ink:#2a190e; --paper:#f0d9b0; --paper-2:#e4c18a; --orange:#d9833a; --orange-d:#a85a22;
-  --dusk:#3a2214; --red:#c8402a; --yellow:#e8b83a; --glow:rgba(255,170,90,.35);
-}
+:root{--ink:#2a190e;--paper:#f1dcb6;--paper2:#e6c48f;--orange:#dc8a3e;--orangeD:#a85a22;--dusk:#3a2214;--deep:#241208;--red:#c8402a;--yellow:#e8b83a;--bar:56px;
+--grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 .25 0 0 0 0 .12 0 0 0 0 0 0 0 0 .14 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
 *{box-sizing:border-box;margin:0}
-html,body{height:100%;overflow:hidden;background:var(--dusk);color:var(--ink);
-  font-family:"DotGothic16","MS Gothic",ui-monospace,monospace;font-size:16px}
+html,body{height:100%;overflow:hidden;background:#000;color:var(--ink);font-family:"DotGothic16","MS Gothic",ui-monospace,monospace;font-size:16px}
 button{font:inherit;color:inherit;cursor:pointer;background:none;border:0}
 :focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
 
-/* wallpaper + crt */
-#wall{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
-#crt{position:fixed;inset:0;z-index:50;pointer-events:none;
-  background:
-   repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px),
-   radial-gradient(ellipse at center,transparent 55%,rgba(30,12,2,.55) 100%),
-   linear-gradient(rgba(217,131,58,.10),rgba(217,131,58,.10));
-  animation:flick 6s steps(1) infinite}
+/* screen, wallpaper, crt */
+#screen{position:fixed;inset:0;background:linear-gradient(#5a3217,#241208)}
+#wall{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#crt{position:fixed;inset:0;z-index:90;pointer-events:none;background:
+ radial-gradient(120% 70% at 18% 0,rgba(255,225,180,.08),transparent 55%),
+ repeating-linear-gradient(0deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px),
+ radial-gradient(ellipse at center,transparent 55%,rgba(30,12,2,.6) 100%),
+ linear-gradient(rgba(217,131,58,.10),rgba(217,131,58,.10));animation:flick 7s steps(1) infinite}
 body.nocrt #crt{display:none}
-@keyframes flick{0%,96%,100%{opacity:1}97%{opacity:.82}98%{opacity:1}99%{opacity:.9}}
+@keyframes flick{0%,96%,100%{opacity:1}97%{opacity:.84}98%{opacity:1}99%{opacity:.92}}
+
+/* tv turning on: dot -> line -> full screen */
+#screen.off{clip-path:inset(50% 50% 50% 50%)}
+#screen.on{animation:tvon 1.7s cubic-bezier(.35,.6,.2,1)}
+#screen.on::after{content:"";position:absolute;inset:0;z-index:100;pointer-events:none;background:#fff2d8;animation:tvflash 1.7s ease-out forwards}
+@keyframes tvon{
+ 0%{clip-path:inset(50% 50% 50% 50%);filter:brightness(3)}
+ 10%{clip-path:inset(49.7% 47% 49.7% 47%)}
+ 36%{clip-path:inset(49.7% 0 49.7% 0)}
+ 50%{clip-path:inset(49.7% 0 49.7% 0);filter:brightness(2.4)}
+ 86%{clip-path:inset(0);filter:brightness(1.5)}
+ 100%{clip-path:inset(0);filter:brightness(1)}}
+@keyframes tvflash{0%,48%{opacity:1}100%{opacity:0}}
+#screen.on .icon,#screen.on #task,#screen.on #music{animation:rise .6s 1.1s cubic-bezier(.2,.8,.2,1) backwards}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
 
 /* desktop icon */
-.icon{position:fixed;top:22px;left:24px;z-index:5;display:grid;justify-items:center;gap:6px;
-  width:92px;padding:8px 4px;color:var(--paper);text-shadow:0 2px 0 rgba(30,12,2,.8)}
-.icon:hover,.icon:focus-visible{background:rgba(217,131,58,.35)}
-.icon svg{width:54px;height:54px}
+.icon{position:fixed;top:22px;left:24px;z-index:5;display:grid;justify-items:center;gap:6px;width:96px;padding:8px 4px;color:var(--paper);text-shadow:0 2px 0 rgba(30,12,2,.85)}
+.icon:hover,.icon:focus-visible{background:rgba(220,138,62,.3);outline:2px dashed var(--paper);outline-offset:-2px}
+.icon svg{width:56px;height:56px;filter:drop-shadow(3px 3px 0 rgba(30,12,2,.6))}
 
 /* windows */
-.win{position:fixed;z-index:10;width:min(560px,92vw);top:90px;left:130px;background:var(--paper);
-  border:3px solid var(--ink);box-shadow:6px 6px 0 rgba(30,12,2,.65);display:none}
-.win.open{display:block}
-.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 8px 6px 12px;
-  background:var(--orange);border-bottom:3px solid var(--ink);cursor:grab;user-select:none;touch-action:none}
-.bar:active{cursor:grabbing}
-.bar b{font-weight:400;letter-spacing:.06em}
+.win{position:fixed;z-index:10;width:min(580px,94vw);background:var(--paper);border:3px solid var(--ink);box-shadow:5px 5px 0 rgba(20,8,0,.75),0 22px 44px rgba(0,0,0,.45);display:none;transform-origin:50% 0}
+.win.open{display:block;animation:pop .3s cubic-bezier(.2,.9,.3,1.15)}
+@keyframes pop{from{transform:scale(.92,.03);opacity:0}}
+.bar{display:flex;align-items:center;justify-content:space-between;padding:5px 6px;background:repeating-linear-gradient(0deg,var(--orange) 0 2px,var(--orangeD) 2px 3px);border-bottom:3px solid var(--ink);cursor:grab;user-select:none;touch-action:none}
+.bar::before{content:"";width:24px}
+.bar b{font-weight:400;padding:0 16px;background:var(--paper);border:2px solid var(--ink)}
 .x{width:24px;height:24px;background:var(--paper);border:2px solid var(--ink);line-height:1}
 .x:hover{background:var(--red);color:var(--paper)}
-.body{padding:16px;max-height:min(62vh,520px);overflow:auto}
-.body p{line-height:1.6;max-width:60ch}
-.body p+p{margin-top:10px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px}
-.card{border:2px solid var(--ink);background:var(--paper-2)}
-.thumb{aspect-ratio:16/9;background:var(--dusk);display:grid;place-items:center;color:var(--paper-2);
-  border-bottom:2px solid var(--ink);overflow:hidden}
-.thumb iframe,.thumb video{width:100%;height:100%;border:0;object-fit:cover}
-.card h3{font-weight:400;font-size:15px;padding:8px 10px 2px}
-.card small{display:block;padding:0 10px 9px;color:var(--orange-d)}
-.mail{display:inline-block;margin-top:12px;padding:6px 12px;background:var(--orange);border:2px solid var(--ink);color:var(--ink);text-decoration:none}
-.mail:hover{background:var(--yellow)}
+.body{padding:16px;max-height:min(64vh,540px);overflow:auto;background:var(--grain),var(--paper);box-shadow:inset 0 0 0 3px var(--paper2)}
+.body p{line-height:1.7;max-width:60ch}.body p+p{margin-top:10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;padding:2px}
+.card{display:block;text-align:left;border:2px solid var(--ink);background:var(--paper2);transition:transform .12s,box-shadow .12s}
+.card:hover,.card:focus-visible{transform:translate(-2px,-2px);box-shadow:4px 4px 0 var(--ink)}
+.thumb{position:relative;aspect-ratio:16/9;background:var(--deep);border-bottom:2px solid var(--ink);overflow:hidden}
+.thumb img,.thumb video{width:100%;height:100%;object-fit:cover;display:block}
+.thumb.play::after{content:"";position:absolute;left:50%;top:50%;margin:-18px 0 0 -12px;border:18px solid transparent;border-left:28px solid var(--paper);border-right:0;filter:drop-shadow(2px 2px 0 var(--ink));opacity:.9}
+.nosig{background:linear-gradient(90deg,#d9c9a6 0 14.3%,#d2ac45 0 28.6%,#7da19e 0 42.9%,#7b9a5b 0 57.2%,#b3626b 0 71.5%,#b8452f 0 85.8%,#4a5f86 0) top/100% 70% no-repeat,#1d0f06}
+.nosig::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px)}
+.nosig span{position:absolute;left:0;right:0;bottom:7%;text-align:center;color:var(--paper);font-size:13px;animation:blink 1.6s steps(1) infinite}
+@keyframes blink{50%{opacity:.3}}
+.card h3{font-weight:400;font-size:15px;padding:9px 10px 2px}
+.card small{display:block;padding:0 10px 9px;color:var(--orangeD)}
+#vbox{aspect-ratio:16/9;background:#000;border:2px solid var(--ink)}
+#vbox iframe,#vbox video{width:100%;height:100%;border:0;display:block}
+.mail{display:inline-block;margin-top:12px;padding:7px 14px;background:var(--orange);border:2px solid var(--ink);box-shadow:3px 3px 0 var(--ink)}
+.mail:hover{background:var(--yellow)}.mail:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
 
-/* taskbar */
-#task{position:fixed;left:0;right:0;bottom:0;height:64px;z-index:20;
-  background:var(--dusk);border-top:3px solid var(--orange-d);display:flex;align-items:center;gap:10px;padding:0 16px}
-.dot{width:26px;height:26px;border-radius:50%;border:3px solid var(--ink);box-shadow:inset -3px -3px 0 rgba(0,0,0,.25)}
-.dot.r{background:var(--red)}.dot.y{background:var(--yellow)}
-.dot:hover{transform:translateY(-2px);box-shadow:0 0 12px var(--glow),inset -3px -3px 0 rgba(0,0,0,.25)}
-.dot[aria-pressed="true"]{outline:2px solid var(--paper);outline-offset:2px}
-
-/* music widget */
-#music{position:fixed;right:0;bottom:0;z-index:30;width:min(360px,100vw);height:92px;
-  background:var(--dusk);border:3px solid var(--orange-d);border-right:0;border-bottom:0;
-  border-top-left-radius:40px 28px;display:flex;align-items:center;gap:14px;padding:0 18px 0 16px;color:var(--paper)}
-#disc{flex:none;width:62px;height:62px;border-radius:50%;border:3px solid var(--paper);
-  background:radial-gradient(circle,var(--dusk) 0 9px,var(--paper) 10px 12px,var(--orange) 13px 24px,var(--orange-d) 25px);
-  animation:spin 3.2s linear infinite;animation-play-state:paused}
+/* taskbar + music: one shape with a curved rise */
+#task{position:fixed;left:0;right:0;bottom:0;height:var(--bar);z-index:20;background:linear-gradient(var(--dusk),var(--deep));border-top:3px solid var(--orangeD);display:flex;align-items:center;gap:14px;padding:0 20px}
+.dot{position:relative;width:26px;height:26px;border-radius:50%;border:2px solid #120803;box-shadow:0 0 0 2px rgba(241,220,182,.22),inset -3px -3px 0 rgba(0,0,0,.28);transition:transform .12s}
+.dot.r{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.55) 0 12%,transparent 14%),var(--red)}
+.dot.y{background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.55) 0 12%,transparent 14%),var(--yellow)}
+.dot:hover{transform:translateY(-2px);box-shadow:0 0 14px rgba(255,170,90,.5),0 0 0 2px rgba(241,220,182,.4),inset -3px -3px 0 rgba(0,0,0,.28)}
+.dot[aria-pressed="false"]{filter:saturate(.3) brightness(.7)}
+.dot::after{content:attr(data-tip);position:absolute;left:-6px;bottom:calc(100% + 12px);white-space:nowrap;background:var(--paper);color:var(--ink);border:2px solid var(--ink);padding:1px 9px;font-size:13px;opacity:0;pointer-events:none;transform:translateY(4px);transition:.15s}
+.dot:hover::after,.dot:focus-visible::after{opacity:1;transform:none}
+#music{position:fixed;right:0;bottom:0;z-index:30;width:min(380px,100vw);height:96px;background:linear-gradient(var(--dusk),var(--deep));border:3px solid var(--orangeD);border-right:0;border-bottom:0;display:flex;align-items:center;gap:14px;padding:0 18px 0 18px;color:var(--paper)}
+#music::before{content:"";position:absolute;right:calc(100% + 3px);bottom:calc(var(--bar) - 3px);width:42px;height:42px;background:radial-gradient(circle at 0 0,transparent 38px,var(--orangeD) 38px 41px,var(--deep) 41px)}
+#disc{flex:none;position:relative;width:64px;height:64px;border-radius:50%;border:3px solid var(--paper);box-shadow:0 0 0 3px rgba(0,0,0,.35);
+ background:conic-gradient(from 20deg,transparent 0 38%,rgba(255,225,180,.22) 50%,transparent 62% 88%,rgba(255,225,180,.14) 95%,transparent),radial-gradient(circle,#120803 0 4px,var(--paper) 5px 6px,var(--orange) 7px 17px,transparent 18px),repeating-radial-gradient(circle,#160a04 0 2px,#35200f 2px 4px);
+ animation:spin 3.4s linear infinite;animation-play-state:paused}
 #music.on #disc{animation-play-state:running}
+#music.wait #disc::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid var(--orange);animation:ping 1.8s ease-out infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.meta{min-width:0;flex:1;text-align:left}
-.meta strong{display:block;font-weight:400;border-bottom:2px solid var(--paper);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.meta span{display:block;color:var(--paper-2);font-size:14px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#next{padding:6px 8px;border:2px solid var(--paper-2)}
+@keyframes ping{from{transform:scale(.8);opacity:.9}to{transform:scale(1.25);opacity:0}}
+.meta{min-width:0;flex:1}
+.meta strong{display:block;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prog{display:block;height:3px;margin:6px 0 5px;background:rgba(241,220,182,.28)}
+.prog i{display:block;height:100%;width:0;background:var(--orange)}
+.meta span{display:block;color:var(--paper2);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#next{padding:6px 9px;border:2px solid var(--paper2);box-shadow:2px 2px 0 rgba(0,0,0,.4)}
 #next:hover{background:var(--orange);color:var(--ink)}
-.note{position:absolute;top:-8px;left:70px;opacity:0;color:var(--yellow)}
-#music.on .note{animation:rise 2.4s ease-out infinite}
-#music.on .note+.note{left:92px;animation-delay:1.2s}
-@keyframes rise{0%{opacity:0;transform:translateY(14px)}25%{opacity:1}100%{opacity:0;transform:translateY(-26px) rotate(14deg)}}
+.note{position:absolute;top:-4px;left:78px;opacity:0;color:var(--yellow)}
+#music.on .note{animation:float 2.6s ease-out infinite}
+#music.on .note+.note{left:104px;animation-delay:1.3s}
+@keyframes float{0%{opacity:0;transform:translateY(14px)}25%{opacity:1}100%{opacity:0;transform:translateY(-28px) rotate(14deg)}}
 
-@media (max-width:560px){.win{left:4vw!important;top:70px!important}#task{height:56px}}
-@media (prefers-reduced-motion:reduce){#crt,#disc,.note{animation:none!important}}
-
-/* tv power-on */
-html,body{background:#000}
-#screen{position:fixed;inset:0}
-#screen.off{clip-path:inset(50% 50% 50% 50%)}
-#screen.on{animation:tvon 1.4s cubic-bezier(.3,.7,.2,1)}
-#screen.on::after{content:"";position:absolute;inset:0;z-index:100;pointer-events:none;background:#fff1d6;animation:tvflash 1.4s ease-out forwards}
-@keyframes tvon{
-  0%{clip-path:inset(50% 50% 50% 50%)}
-  12%{clip-path:inset(49.6% 46% 49.6% 46%)}
-  42%{clip-path:inset(49.6% 0 49.6% 0)}
-  88%{clip-path:inset(0 0 0 0)}
-  100%{clip-path:inset(0 0 0 0)}
-}
-@keyframes tvflash{0%,42%{opacity:1}100%{opacity:0}}
-#standby{position:fixed;inset:0;z-index:60;background:#000;display:none;place-items:center;color:var(--paper-2);text-align:center}
-body.standby #standby{display:grid}
-#standby p{display:flex;align-items:center;gap:12px;opacity:.8;animation:blink 1.6s steps(1) infinite}
-#standby i{width:10px;height:10px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red)}
-@keyframes blink{50%{opacity:.25}}
-@media (prefers-reduced-motion:reduce){#screen.on,#screen.on::after,#standby p{animation:none!important}}
+@media (max-width:600px){:root{--bar:52px}.win{left:3vw!important;top:64px!important}
+ #music{bottom:var(--bar);width:100%;height:84px;border-left:0}#music::before{display:none}.note{display:none}}
+@media (prefers-reduced-motion:reduce){#screen.on,#screen.on::after,#screen.on .icon,#screen.on #task,#screen.on #music,#crt,#disc,.note,.win.open,.nosig span{animation:none!important}#screen.on::after{display:none}}
 </style>
 </head>
 <body>
-
 <div id="screen" class="off">
 <video id="wall" src="wallpaper.mp4" autoplay muted loop playsinline preload="auto"></video>
 
 <button class="icon" data-open="anims" aria-label="Open anims folder">
-  <svg viewBox="0 0 54 54" fill="none" stroke="#2a190e" stroke-width="3" shape-rendering="crispEdges">
-    <path d="M5 13h16l4 5h24v28H5z" fill="#d9833a"/><path d="M5 22h44" /><path d="M12 28h12v10" stroke="#f0d9b0"/>
-  </svg>
+  <svg viewBox="0 0 48 48" shape-rendering="crispEdges"><path fill="#2a190e" d="M3 9h15l4 5h23v29H3z"/><path fill="#e6c48f" d="M6 17h36v23H6z"/><path fill="#dc8a3e" d="M6 22h36v18H6z"/><path fill="#f1dcb6" d="M10 26h12v3H10z"/></svg>
   <span>anims</span>
 </button>
 
-<!-- windows -->
-<section class="win" id="anims" style="top:90px;left:130px" aria-label="Anims">
+<section class="win" id="anims" style="top:80px;left:130px" aria-label="Anims">
   <div class="bar"><b>anims</b><button class="x" data-close aria-label="Close">x</button></div>
-  <div class="body"><div class="grid">
-    <!-- Replace each .thumb content with a Vimeo/YouTube iframe or a <video> and edit the title -->
-    <article class="card"><div class="thumb">add video</div><h3>Animation title 1</h3><small>2026</small></article>
-    <article class="card"><div class="thumb">add video</div><h3>Animation title 2</h3><small>2026</small></article>
-    <article class="card"><div class="thumb">add video</div><h3>Animation title 3</h3><small>2025</small></article>
-    <article class="card"><div class="thumb">add video</div><h3>Animation title 4</h3><small>2025</small></article>
-  </div></div>
+  <div class="body"><div class="grid" id="grid"></div></div>
+</section>
+
+<section class="win" id="viewer" style="top:60px;left:200px;width:min(760px,94vw)" aria-label="Player">
+  <div class="bar"><b id="vtitle">player</b><button class="x" data-close aria-label="Close">x</button></div>
+  <div class="body"><div id="vbox"></div></div>
 </section>
 
 <section class="win" id="about" style="top:120px;left:190px" aria-label="About">
@@ -146,52 +140,58 @@ body.standby #standby{display:grid}
   <div class="bar"><b>contact</b><button class="x" data-close aria-label="Close">x</button></div>
   <div class="body">
     <p>Want to work together or just say hi?</p>
-    <span class="mail">Discord: adasynek</span>
+    <button class="mail" id="copy" title="Copy my Discord name">Discord: adasynek</button>
   </div>
 </section>
 
-<!-- taskbar -->
 <nav id="task" aria-label="Taskbar">
-  <button class="dot r" data-open="about" aria-label="About"></button>
-  <button class="dot y" data-open="contact" aria-label="Contact"></button>
-  <button class="dot y" id="crtBtn" aria-pressed="true" aria-label="Toggle CRT effect"></button>
+  <button class="dot r" data-open="about" data-tip="about" aria-label="About"></button>
+  <button class="dot y" data-open="contact" data-tip="contact" aria-label="Contact"></button>
+  <button class="dot y" id="crtBtn" data-tip="crt on/off" aria-pressed="true" aria-label="Toggle CRT effect"></button>
 </nav>
 
-<!-- music -->
-<div id="music">
+<div id="music" class="wait">
   <span class="note" aria-hidden="true">♪</span><span class="note" aria-hidden="true">♫</span>
   <button id="disc" aria-label="Play or pause music"></button>
-  <div class="meta"><strong id="tName">Music name</strong><span id="tArtist">Artist</span></div>
+  <div class="meta"><strong id="tName">Music name</strong><span class="prog"><i id="fill"></i></span><span id="tArtist">Artist</span></div>
   <button id="next" aria-label="Next track">&gt;&gt;</button>
   <audio id="audio" preload="none"></audio>
 </div>
-
 </div>
 <div id="crt"></div>
-<div id="standby"><p><i></i>click anywhere to turn on</p></div>
+
 <script>
-// ---- MUSIC ----
-// 1. Put your mp3s in a folder called "music" and name them music1.mp3, music2.mp3, music3.mp3 ...
-// 2. Add a line below for each one with its title and artist. Number = the number in the file name.
+// ---- ANIMATIONS: add yours here. Use youtube (video id), vimeo (video id) or video (mp4 path in your repo) ----
+// Optional: thumb:"anims/cover1.jpg". A project with no video shows a NO SIGNAL card.
+const projects=[
+  {title:"Animation title 1",year:"2026"},
+  {title:"Animation title 2",year:"2026"},
+  {title:"Animation title 3",year:"2025"},
+  {title:"Animation title 4",year:"2025"}
+  // {title:"My animation",year:"2026",youtube:"dQw4w9WgXcQ"},
+  // {title:"My animation",year:"2026",vimeo:"123456789"},
+  // {title:"My animation",year:"2026",video:"anims/anim1.mp4"},
+];
+
+// ---- MUSIC: put mp3s in a "music" folder named music1.mp3, music2.mp3 ... then fill in each title/artist ----
 const info={
   1:{title:"Song name 1",artist:"Artist 1"},
   2:{title:"Song name 2",artist:"Artist 2"},
   3:{title:"Song name 3",artist:"Artist 3"}
 };
 
-const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
-let z=10;
+const $=s=>document.querySelector(s),$$=s=>[...document.querySelectorAll(s)];
+let z=10,resume=false;
 const front=w=>w.style.zIndex=++z;
-
-// make sure the wallpaper plays (some browsers block autoplay until a first click)
 const wall=$("#wall");wall.muted=true;
-const go=()=>wall.play().catch(()=>{});
-go();["pointerdown","keydown","touchstart"].forEach(ev=>addEventListener(ev,go,{once:true}));
-document.addEventListener("visibilitychange",()=>{if(!document.hidden)go()});
 
 // windows
+function closeWin(w){
+  w.classList.remove("open");
+  if(w.id==="viewer"){$("#vbox").innerHTML="";if(resume){resume=false;audio.play().catch(()=>{})}}
+}
 $$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);w.classList.add("open");front(w)}));
-$$("[data-close]").forEach(b=>b.addEventListener("click",()=>b.closest(".win").classList.remove("open")));
+$$("[data-close]").forEach(b=>b.addEventListener("click",()=>closeWin(b.closest(".win"))));
 $$(".win").forEach(w=>{
   w.addEventListener("pointerdown",()=>front(w));
   const bar=w.querySelector(".bar");
@@ -204,20 +204,40 @@ $$(".win").forEach(w=>{
     bar.addEventListener("pointermove",mv);bar.addEventListener("pointerup",up);
   });
 });
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){const o=$$(".win.open").sort((a,b)=>b.style.zIndex-a.style.zIndex)[0];o&&o.classList.remove("open")}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){const o=$$(".win.open").sort((a,b)=>b.style.zIndex-a.style.zIndex)[0];o&&closeWin(o)}});
 
-// crt toggle
+// animation cards + player
+function openViewer(p){
+  $("#vtitle").textContent=p.title;
+  $("#vbox").innerHTML=p.youtube?`<iframe src="https://www.youtube-nocookie.com/embed/${p.youtube}?autoplay=1&rel=0" allow="autoplay;fullscreen" allowfullscreen></iframe>`
+   :p.vimeo?`<iframe src="https://player.vimeo.com/video/${p.vimeo}?autoplay=1" allow="autoplay;fullscreen" allowfullscreen></iframe>`
+   :`<video src="${p.video}" controls autoplay playsinline></video>`;
+  if(!audio.paused){resume=true;audio.pause()}
+  const w=$("#viewer");w.classList.add("open");front(w);
+}
+projects.forEach(p=>{
+  const src=p.youtube||p.vimeo||p.video,c=document.createElement("button");c.className="card";
+  const img=p.thumb?`<img src="${p.thumb}" alt="">`:p.youtube?`<img src="https://i.ytimg.com/vi/${p.youtube}/hqdefault.jpg" alt="">`:p.video?`<video src="${p.video}#t=0.5" muted loop preload="metadata"></video>`:"";
+  c.innerHTML=`<div class="thumb ${src?"play":"nosig"}">${img}${src?"":"<span>NO SIGNAL</span>"}</div><h3>${p.title}</h3><small>${p.year}</small>`;
+  const v=c.querySelector("video");
+  c.onmouseenter=()=>v&&v.play().catch(()=>{});c.onmouseleave=()=>{if(v){v.pause();v.currentTime=.5}};
+  c.onclick=()=>src&&openViewer(p);
+  $("#grid").append(c);
+});
+
+$("#copy").addEventListener("click",e=>{
+  const b=e.currentTarget;navigator.clipboard&&navigator.clipboard.writeText("adasynek").catch(()=>{});
+  b.textContent="copied!";setTimeout(()=>b.textContent="Discord: adasynek",1400);
+});
 $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.toggle("nocrt");e.currentTarget.setAttribute("aria-pressed",!off)});
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
-const audio=$("#audio"),box=$("#music");let tracks=[],i=0;
-audio.volume=0.1; // 30% volume (change 0.3 to 0.5 for 50%, etc.)
+const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false;
+audio.volume=0.3; // 30% volume
 const probe=async src=>{
-  try{const r=await fetch(src,{method:"HEAD"});return r.ok}   // works on GitHub Pages
-  catch(e){                                                   // fallback (e.g. opened from a folder)
-    return new Promise(res=>{const a=new Audio();const t=setTimeout(()=>res(false),4000);
-      a.onloadedmetadata=a.oncanplay=()=>{clearTimeout(t);res(true)};a.onerror=()=>{clearTimeout(t);res(false)};a.src=src});
-  }
+  try{const r=await fetch(src,{method:"HEAD"});return r.ok}
+  catch(e){return new Promise(res=>{const a=new Audio(),t=setTimeout(()=>res(false),4000);
+    a.onloadedmetadata=a.oncanplay=()=>{clearTimeout(t);res(true)};a.onerror=()=>{clearTimeout(t);res(false)};a.src=src})}
 };
 async function findTracks(){
   for(let n=1;n<=100;n++){
@@ -231,39 +251,37 @@ async function findTracks(){
 }
 function show(n){i=(n+tracks.length)%tracks.length;const t=tracks[i];$("#tName").textContent=t.title;$("#tArtist").textContent=t.artist}
 function start(n){show(n);audio.src=tracks[i].src;return audio.play()}
-function play(n){if(!tracks.length)return;start(n).catch(()=>{})}
+function play(n){if(tracks.length)start(n).catch(()=>{})}
 function toggle(){
   if(!tracks.length)return;
   if(!audio.src)return play(0);
-  audio.paused?audio.play().catch(()=>{}):audio.pause();
+  if(audio.paused){userPaused=false;audio.play().catch(()=>{})}else{userPaused=true;audio.pause()}
 }
-audio.addEventListener("play",()=>box.classList.add("on"));
+audio.addEventListener("play",()=>{box.classList.add("on");box.classList.remove("wait");started=true;["pointerdown","keydown"].forEach(ev=>removeEventListener(ev,kick))});
 audio.addEventListener("pause",()=>box.classList.remove("on"));
 audio.addEventListener("ended",()=>play(i+1));
+audio.addEventListener("timeupdate",()=>{$("#fill").style.width=(audio.duration?audio.currentTime/audio.duration*100:0)+"%"});
 $("#disc").addEventListener("click",toggle);
 $("#next").addEventListener("click",()=>play(i+1));
+// if the browser blocks sound at load, the first click or key press anywhere starts the music
+function kick(e){if(started||!tracks.length||e.target.closest("#music"))return;play(0)}
+["pointerdown","keydown"].forEach(ev=>addEventListener(ev,kick));
 
-// power on: try autoplay; if the browser blocks sound, wait for one click
-let decided=false,goFn=null;
-function powerOn(){
-  if(decided)return;decided=true;
-  document.body.classList.remove("standby");
-  if(goFn)["pointerdown","keydown"].forEach(ev=>removeEventListener(ev,goFn));
-  $("#screen").classList.replace("off","on");
-}
-function standby(){
-  if(decided)return;
-  document.body.classList.add("standby");
-  goFn=()=>{const was=decided;powerOn();if(!was&&tracks.length)start(0).catch(()=>{})};
-  ["pointerdown","keydown"].forEach(ev=>addEventListener(ev,goFn));
-}
+// boot: the TV turns on by itself once the wallpaper is ready
 async function boot(){
-  await findTracks();
-  if(!tracks.length)return powerOn();
-  try{await start(0);powerOn()}catch(e){standby()}
+  const found=findTracks();
+  await Promise.all([
+    new Promise(r=>{wall.readyState>=3?r():wall.addEventListener("canplay",r,{once:true});setTimeout(r,2500)}),
+    new Promise(r=>setTimeout(r,500))
+  ]);
+  wall.play().catch(()=>{});
+  $("#screen").classList.replace("off","on");
+  await found;
+  if(tracks.length&&!started)start(0).catch(()=>{});
 }
-setTimeout(standby,3500);
 boot();
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)wall.play().catch(()=>{})});
+["pointerdown","keydown"].forEach(ev=>addEventListener(ev,()=>wall.play().catch(()=>{}),{once:true}));
 </script>
 </body>
 </html>
