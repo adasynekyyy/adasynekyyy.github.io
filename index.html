@@ -260,7 +260,7 @@ $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.togg
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false,firstReady=Promise.resolve();
-const VOL=0.1,FADE_IN=3,FADE_OUT=3; // music volume (0.1 = 10%) and fade lengths in seconds
+const VOL=0.05,FADE_IN=3,FADE_OUT=3; // music volume (0.1 = 10%) and fade lengths in seconds
 audio.volume=0;
 let t0=0,outAt=null,afterOut=null;
 const sec=()=>performance.now()/1000;
