@@ -289,16 +289,24 @@ function initFx(){
   dry=ac.createGain();wet=ac.createGain();
   src.connect(dry);dry.connect(ac.destination);wet.connect(ac.destination);
 
-  const hp=ac.createBiquadFilter();hp.type="highpass";hp.frequency.value=140;
-  const pk=ac.createBiquadFilter();pk.type="peaking";pk.frequency.value=1800;pk.gain.value=4;pk.Q.value=.8;
-  const lp=ac.createBiquadFilter();lp.type="lowpass";lp.frequency.value=5200;lp.Q.value=.9;
+  // TV speaker EQ: mono, no deep bass, boxy cabinet bump, nasal midrange, harsh edge, steep top cut
+  const mono=ac.createGain();mono.channelCount=1;mono.channelCountMode="explicit";mono.channelInterpretation="speakers";
+  const eq=(type,f,g,q)=>{const n=ac.createBiquadFilter();n.type=type;n.frequency.value=f;if(g!==undefined)n.gain.value=g;if(q!==undefined)n.Q.value=q;return n};
+  const hp=eq("highpass",190,undefined,.9);            // tiny speaker: almost no bass
+  const box=eq("peaking",280,6,1.3);                   // plastic cabinet boxiness
+  const dip=eq("peaking",800,-3,1);                    // hollow mids
+  const nas=eq("peaking",2300,7,1.5);                  // nasal / honky TV voice
+  const edge=eq("peaking",3600,4,2);                   // harsh cone edge
+  const lp=eq("lowpass",4300,undefined,1.4);           // resonant top roll-off
+  const lp2=eq("lowpass",6500,undefined,.7);           // steeper cut, no sparkle
   const sh=ac.createWaveShaper(),curve=new Float32Array(1024);
   for(let k=0;k<1024;k++){const x=k/512-1;curve[k]=Math.tanh(x*2.2)/Math.tanh(2.2)}
   sh.curve=curve;sh.oversample="2x";
   const dl=ac.createDelay(.05);dl.delayTime.value=.008;               // slow pitch wobble
   const lfo=ac.createOscillator(),lg=ac.createGain();
   lfo.frequency.value=.7;lg.gain.value=.0007;lfo.connect(lg);lg.connect(dl.delayTime);lfo.start();
-  src.connect(hp);hp.connect(pk);pk.connect(sh);sh.connect(lp);lp.connect(dl);dl.connect(wet);
+  src.connect(mono);mono.connect(hp);hp.connect(box);box.connect(dip);dip.connect(nas);nas.connect(edge);
+  edge.connect(sh);sh.connect(lp);lp.connect(lp2);lp2.connect(dl);dl.connect(wet);
 
   const hum=ac.createOscillator(),hg=ac.createGain();                 // 50 Hz mains hum
   hum.frequency.value=50;hg.gain.value=.004;hum.connect(hg);hg.connect(wet);hum.start();
