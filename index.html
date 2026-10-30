@@ -300,7 +300,7 @@ function kick(e){if(started||!tracks.length||e.target.closest("#music"))return;p
 // boot: wait only for what the intro needs (wallpaper, sound, song list), then the TV turns on
 const once=(el,...evs)=>new Promise(r=>evs.forEach(ev=>el.addEventListener(ev,r,{once:true})));
 const wait=(ms,v)=>new Promise(r=>setTimeout(()=>r(v),ms));
-const SFX_FILES=["turnon.mp3","turnon.mp4","turnon.wav","turnon.ogg","sfx/tv-on.mp3"]; // first one that exists is used
+const SFX_FILES=["turnon.mp3","turnon.mp4","turnon.wav","turnon.ogg","sfx/tvon.mp3"]; // first one that exists is used
 const SFX_OFFSET=0;           // seconds. + = sound starts later than the animation, - = sound starts first
 const sfx=new Audio();sfx.preload="auto";sfx.volume=0.35; // 0.35 = 35% volume
 async function loadSfx(){
