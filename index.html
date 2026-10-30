@@ -203,11 +203,12 @@ const front=w=>w.style.zIndex=++z;
 const wall=$("#wall");wall.muted=true;
 
 // windows
+function loadCards(){$$("#grid video[data-src]").forEach(v=>{v.src=v.dataset.src;v.removeAttribute("data-src")})}
 function closeWin(w){
   w.classList.remove("open");
   if(w.id==="viewer"){$("#vbox").innerHTML="";if(resume){resume=false;audio.play().catch(()=>{})}}
 }
-$$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);w.classList.add("open");front(w)}));
+$$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);w.classList.add("open");front(w);if(w.id==="anims")loadCards()}));
 $$("[data-close]").forEach(b=>b.addEventListener("click",()=>closeWin(b.closest(".win"))));
 $$(".win").forEach(w=>{
   w.addEventListener("pointerdown",()=>front(w));
@@ -234,7 +235,7 @@ function openViewer(p){
 }
 projects.forEach(p=>{
   const src=p.youtube||p.vimeo||p.video,c=document.createElement("button");c.className="card";
-  const img=p.thumb?`<img src="${p.thumb}" alt="">`:p.youtube?`<img src="https://i.ytimg.com/vi/${p.youtube}/hqdefault.jpg" alt="">`:p.video?`<video src="${p.video}#t=0.5" muted loop preload="metadata"></video>`:"";
+  const img=p.thumb?`<img src="${p.thumb}" alt="">`:p.youtube?`<img src="https://i.ytimg.com/vi/${p.youtube}/hqdefault.jpg" alt="">`:p.video?`<video data-src="${p.video}#t=0.5" muted loop preload="metadata"></video>`:"";
   c.innerHTML=`<div class="thumb ${src?"play":"nosig"}">${img}${src?"":"<span>NO SIGNAL</span>"}</div><h3>${p.title}</h3><small>${p.year}</small>`;
   const v=c.querySelector("video");
   c.onmouseenter=()=>v&&v.play().catch(()=>{});c.onmouseleave=()=>{if(v){v.pause();v.currentTime=.5}};
@@ -250,7 +251,19 @@ $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.togg
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false;
-audio.volume=0.1; // 10% volume (0.3 = 30%)
+const VOL=0.1,FADE_IN=3,FADE_OUT=3; // music volume (0.1 = 10%) and fade lengths in seconds
+audio.volume=0;
+let t0=0,outAt=null,afterOut=null;
+const sec=()=>performance.now()/1000;
+function tick(){                      // runs every frame while music plays and sets the volume
+  const c=audio.currentTime,d=audio.duration;let g=Math.min(1,c/FADE_IN,(sec()-t0)/.5);   // fade in
+  if(d&&isFinite(d))g=Math.min(g,(d-c)/FADE_OUT);                                          // fade out at the end
+  if(outAt!==null){g=Math.min(g,1-(sec()-outAt)/.4);                                       // quick fade for pause / next
+    if(sec()-outAt>=.4){const f=afterOut;outAt=afterOut=null;audio.volume=0;f&&f();return}}
+  audio.volume=VOL*Math.max(0,Math.min(1,g));
+  if(!audio.paused)requestAnimationFrame(tick);
+}
+const fadeThen=f=>{if(audio.paused)return f();outAt=sec();afterOut=f};
 const probe=async src=>{
   try{const r=await fetch(src,{method:"HEAD"});return r.ok}
   catch(e){return new Promise(res=>{const a=new Audio(),t=setTimeout(()=>res(false),4000);
@@ -262,53 +275,56 @@ async function findTracks(){
     for(const f of [`music${n}.mp3`,`music ${n}.mp3`]){const u="music/"+encodeURI(f);if(await probe(u)){src=u;break}else if(n===1)console.log("not found:",u)}
     if(!src)break;
     tracks.push({src,...(info[n]||{title:"music "+n,artist:"unknown artist"})});
-    if(tracks.length===1)show(0);
+    if(tracks.length===1){audio.preload="auto";start(0).catch(()=>{})}
   }
   if(!tracks.length){box.classList.remove("wait");$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3"}
 }
 function show(n){i=(n+tracks.length)%tracks.length;const t=tracks[i];$("#tName").textContent=t.title;$("#tArtist").textContent=t.artist}
-function start(n){show(n);if(audio.getAttribute("src")!==tracks[i].src)audio.src=tracks[i].src;return audio.play()}
+function start(n){show(n);audio.volume=0;if(audio.getAttribute("src")!==tracks[i].src)audio.src=tracks[i].src;return audio.play()}
 function play(n){if(tracks.length)start(n).catch(()=>{})}
 function toggle(){
   if(!tracks.length)return;
   if(!audio.src)return play(0);
-  if(audio.paused){userPaused=false;audio.play().catch(()=>{})}else{userPaused=true;audio.pause()}
+  if(audio.paused){userPaused=false;audio.play().catch(()=>{})}else{userPaused=true;fadeThen(()=>audio.pause())}
 }
-audio.addEventListener("play",()=>{box.classList.add("on");box.classList.remove("wait");started=true;["pointerdown","pointerup","keydown"].forEach(ev=>removeEventListener(ev,kick))});
+audio.addEventListener("play",()=>{box.classList.add("on");box.classList.remove("wait");started=true;t0=sec();outAt=afterOut=null;requestAnimationFrame(tick);["pointerdown","pointerup","keydown"].forEach(ev=>removeEventListener(ev,kick))});
 audio.addEventListener("pause",()=>box.classList.remove("on"));
 audio.addEventListener("ended",()=>play(i+1));
 audio.addEventListener("timeupdate",()=>{$("#fill").style.width=(audio.duration?audio.currentTime/audio.duration*100:0)+"%"});
 $("#disc").addEventListener("click",toggle);
-$("#next").addEventListener("click",()=>play(i+1));
+$("#next").addEventListener("click",()=>fadeThen(()=>play(i+1)));
 // if the browser blocks sound at load, the first click or key press anywhere starts the music
 function kick(e){if(started||!tracks.length||e.target.closest("#music"))return;play(0)}
 ["pointerdown","pointerup","keydown"].forEach(ev=>addEventListener(ev,kick));
 
-// boot: wait until everything is loaded (page, fonts, wallpaper, first song), then the TV turns on
+// boot: wait only for what the intro needs (wallpaper, sound, song list), then the TV turns on
 const once=(el,...evs)=>new Promise(r=>evs.forEach(ev=>el.addEventListener(ev,r,{once:true})));
-const setPct=p=>$("#bootBar").style.width=Math.min(100,p)+"%";
-wall.addEventListener("progress",()=>{if(wall.duration&&wall.buffered.length)setPct(wall.buffered.end(wall.buffered.length-1)/wall.duration*90)});
-const SFX_FILE="turnon.mp4";  // your turn-on sound (falls back to sfx/tv-on.mp3 if it's missing)
+const wait=(ms,v)=>new Promise(r=>setTimeout(()=>r(v),ms));
+const SFX_FILES=["turnon.mp3","turnon.mp4","turnon.wav","turnon.ogg","sfx/tv-on.mp3"]; // first one that exists is used
 const SFX_OFFSET=0;           // seconds. + = sound starts later than the animation, - = sound starts first
-const sfx=new Audio(SFX_FILE);sfx.preload="auto";sfx.volume=0.15; // 0.35 = 35% volume
+const sfx=new Audio();sfx.preload="auto";sfx.volume=0.35; // 0.35 = 35% volume
+async function loadSfx(){
+  for(const f of SFX_FILES){
+    sfx.src=f;
+    if(await Promise.race([once(sfx,"canplaythrough").then(()=>1),once(sfx,"error").then(()=>0)]))return;
+  }
+}
 async function boot(){
-  const loaded=Promise.all([
-    document.readyState==="complete"||once(window,"load"),
-    document.fonts&&document.fonts.ready,
-    wall.readyState>=4||once(wall,"canplaythrough","error"),
-    findTracks().then(()=>{
-      if(!tracks.length)return;
-      audio.preload="auto";audio.src=tracks[0].src;
-      return audio.readyState>=3||once(audio,"canplay","error");
-    }),
-    (async()=>{
-      if(sfx.readyState<3){await once(sfx,"canplaythrough","error");
-        if(sfx.error){sfx.src="sfx/tv-on.mp3";if(sfx.readyState<3)await once(sfx,"canplaythrough","error")}}
-    })(),
-    new Promise(r=>setTimeout(r,500))
+  const pending=new Set(),label=$("#boot span");
+  const task=(name,p)=>{pending.add(name);label.textContent="loading "+name;
+    return Promise.resolve(p).catch(()=>{}).then(()=>{pending.delete(name);
+      label.textContent=pending.size?"loading "+[...pending][0]:"ready";$("#bootBar").style.width=(3-pending.size)/3*100+"%"})};
+  const found=findTracks();
+  await Promise.race([
+    Promise.all([
+      task("wallpaper",wall.readyState>=3||once(wall,"canplay","error")),
+      task("sound",Promise.race([loadSfx(),wait(3000)])),
+      task("music",Promise.race([found,wait(4000)])),
+      wait(500)
+    ]),
+    wait(6000) // never hang
   ]);
-  await Promise.race([loaded,new Promise(r=>setTimeout(r,12000))]); // never hang forever
-  setPct(100);
+  $("#bootBar").style.width="100%";
   $("#boot").classList.add("hide");
   wall.play().catch(()=>{});
   const d=isFinite(sfx.duration)&&sfx.duration>0?Math.min(3.5,Math.max(1.2,sfx.duration)):1.7;
@@ -317,11 +333,10 @@ async function boot(){
   const ring=()=>{sfx.currentTime=0;sfx.play().catch(()=>{})};
   const later=(f,sec)=>sec>0?setTimeout(f,sec*1000):f();
   if(SFX_OFFSET>=0){go();later(ring,SFX_OFFSET)}else{ring();later(go,-SFX_OFFSET)}
-  if(tracks.length&&!started)start(0).catch(()=>{});
 }
 boot();
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)wall.play().catch(()=>{})});
 ["pointerdown","keydown"].forEach(ev=>addEventListener(ev,()=>wall.play().catch(()=>{}),{once:true}));
 </script>
 </body>
-</html> 
+</html>
