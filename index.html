@@ -31,8 +31,8 @@ body.nocrt #crt{display:none}
 
 /* tv turning on: dot -> line -> full screen */
 #screen.off{clip-path:inset(50% 50% 50% 50%)}
-#screen.on{animation:tvon 1.7s cubic-bezier(.35,.6,.2,1)}
-#screen.on::after{content:"";position:absolute;inset:0;z-index:100;pointer-events:none;background:#fff2d8;animation:tvflash 1.7s ease-out forwards}
+#screen.on{animation:tvon var(--tv,1.7s) cubic-bezier(.35,.6,.2,1)}
+#screen.on::after{content:"";position:absolute;inset:0;z-index:100;pointer-events:none;background:#fff2d8;animation:tvflash var(--tv,1.7s) ease-out forwards}
 @keyframes tvon{
  0%{clip-path:inset(50% 50% 50% 50%);filter:brightness(3)}
  10%{clip-path:inset(49.7% 47% 49.7% 47%)}
@@ -41,7 +41,7 @@ body.nocrt #crt{display:none}
  86%{clip-path:inset(0);filter:brightness(1.5)}
  100%{clip-path:inset(0);filter:brightness(1)}}
 @keyframes tvflash{0%,48%{opacity:1}100%{opacity:0}}
-#screen.on .icon,#screen.on #task,#screen.on #music{animation:rise .6s 1.1s cubic-bezier(.2,.8,.2,1) backwards}
+#screen.on .icon,#screen.on #task,#screen.on #music{animation:rise .6s calc(var(--tv,1.7s)*.65) cubic-bezier(.2,.8,.2,1) backwards}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}}
 
 /* desktop icon */
@@ -92,6 +92,7 @@ body.nocrt #crt{display:none}
  background:conic-gradient(from 20deg,transparent 0 38%,rgba(255,225,180,.22) 50%,transparent 62% 88%,rgba(255,225,180,.14) 95%,transparent),radial-gradient(circle,#120803 0 4px,var(--paper) 5px 6px,var(--orange) 7px 17px,transparent 18px),repeating-radial-gradient(circle,#160a04 0 2px,#35200f 2px 4px);
  animation:spin 3.4s linear infinite;animation-play-state:paused}
 #music.on #disc{animation-play-state:running}
+#music.wait #tArtist::after{content:" · click anywhere";color:var(--orange)}
 #music.wait #disc::after{content:"";position:absolute;inset:-9px;border-radius:50%;border:2px solid var(--orange);animation:ping 1.8s ease-out infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes ping{from{transform:scale(.8);opacity:.9}to{transform:scale(1.25);opacity:0}}
@@ -263,7 +264,7 @@ async function findTracks(){
     tracks.push({src,...(info[n]||{title:"music "+n,artist:"unknown artist"})});
     if(tracks.length===1)show(0);
   }
-  if(!tracks.length){$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3"}
+  if(!tracks.length){box.classList.remove("wait");$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3"}
 }
 function show(n){i=(n+tracks.length)%tracks.length;const t=tracks[i];$("#tName").textContent=t.title;$("#tArtist").textContent=t.artist}
 function start(n){show(n);if(audio.getAttribute("src")!==tracks[i].src)audio.src=tracks[i].src;return audio.play()}
@@ -273,7 +274,7 @@ function toggle(){
   if(!audio.src)return play(0);
   if(audio.paused){userPaused=false;audio.play().catch(()=>{})}else{userPaused=true;audio.pause()}
 }
-audio.addEventListener("play",()=>{box.classList.add("on");box.classList.remove("wait");started=true;["pointerdown","keydown"].forEach(ev=>removeEventListener(ev,kick))});
+audio.addEventListener("play",()=>{box.classList.add("on");box.classList.remove("wait");started=true;["pointerdown","pointerup","keydown"].forEach(ev=>removeEventListener(ev,kick))});
 audio.addEventListener("pause",()=>box.classList.remove("on"));
 audio.addEventListener("ended",()=>play(i+1));
 audio.addEventListener("timeupdate",()=>{$("#fill").style.width=(audio.duration?audio.currentTime/audio.duration*100:0)+"%"});
@@ -281,12 +282,15 @@ $("#disc").addEventListener("click",toggle);
 $("#next").addEventListener("click",()=>play(i+1));
 // if the browser blocks sound at load, the first click or key press anywhere starts the music
 function kick(e){if(started||!tracks.length||e.target.closest("#music"))return;play(0)}
-["pointerdown","keydown"].forEach(ev=>addEventListener(ev,kick));
+["pointerdown","pointerup","keydown"].forEach(ev=>addEventListener(ev,kick));
 
 // boot: wait until everything is loaded (page, fonts, wallpaper, first song), then the TV turns on
 const once=(el,...evs)=>new Promise(r=>evs.forEach(ev=>el.addEventListener(ev,r,{once:true})));
 const setPct=p=>$("#bootBar").style.width=Math.min(100,p)+"%";
 wall.addEventListener("progress",()=>{if(wall.duration&&wall.buffered.length)setPct(wall.buffered.end(wall.buffered.length-1)/wall.duration*90)});
+const SFX_FILE="turnon.mp4";  // your turn-on sound (falls back to sfx/tv-on.mp3 if it's missing)
+const SFX_OFFSET=0;           // seconds. + = sound starts later than the animation, - = sound starts first
+const sfx=new Audio(SFX_FILE);sfx.preload="auto";sfx.volume=0.15; // 0.35 = 35% volume
 async function boot(){
   const loaded=Promise.all([
     document.readyState==="complete"||once(window,"load"),
@@ -297,13 +301,22 @@ async function boot(){
       audio.preload="auto";audio.src=tracks[0].src;
       return audio.readyState>=3||once(audio,"canplay","error");
     }),
+    (async()=>{
+      if(sfx.readyState<3){await once(sfx,"canplaythrough","error");
+        if(sfx.error){sfx.src="sfx/tv-on.mp3";if(sfx.readyState<3)await once(sfx,"canplaythrough","error")}}
+    })(),
     new Promise(r=>setTimeout(r,500))
   ]);
   await Promise.race([loaded,new Promise(r=>setTimeout(r,12000))]); // never hang forever
   setPct(100);
   $("#boot").classList.add("hide");
   wall.play().catch(()=>{});
-  $("#screen").classList.replace("off","on");
+  const d=isFinite(sfx.duration)&&sfx.duration>0?Math.min(3.5,Math.max(1.2,sfx.duration)):1.7;
+  document.documentElement.style.setProperty("--tv",d+"s");   // animation lasts as long as the sound
+  const go=()=>$("#screen").classList.replace("off","on");
+  const ring=()=>{sfx.currentTime=0;sfx.play().catch(()=>{})};
+  const later=(f,sec)=>sec>0?setTimeout(f,sec*1000):f();
+  if(SFX_OFFSET>=0){go();later(ring,SFX_OFFSET)}else{ring();later(go,-SFX_OFFSET)}
   if(tracks.length&&!started)start(0).catch(()=>{});
 }
 boot();
@@ -311,4 +324,4 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)wall.play(
 ["pointerdown","keydown"].forEach(ev=>addEventListener(ev,()=>wall.play().catch(()=>{}),{once:true}));
 </script>
 </body>
-</html>
+</html> 
