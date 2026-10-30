@@ -125,7 +125,7 @@ body.nocrt #crt{display:none}
 </head>
 <body>
 <div id="screen" class="off">
-<video id="wall" src="wallpaper.mp4" autoplay muted loop playsinline preload="auto"></video>
+<video id="wall" autoplay muted loop playsinline preload="auto"></video>
 
 <button class="icon" data-open="anims" aria-label="Open anims folder">
   <svg viewBox="0 0 48 48" shape-rendering="crispEdges"><path fill="#2a190e" d="M3 9h15l4 5h23v29H3z"/><path fill="#e6c48f" d="M6 17h36v23H6z"/><path fill="#dc8a3e" d="M6 22h36v18H6z"/><path fill="#f1dcb6" d="M10 26h12v3H10z"/></svg>
@@ -259,7 +259,7 @@ $("#copy").addEventListener("click",e=>{
 $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.toggle("nocrt");e.currentTarget.setAttribute("aria-pressed",!off)});
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
-const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false;
+const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false,firstReady=Promise.resolve();
 const VOL=0.1,FADE_IN=3,FADE_OUT=3; // music volume (0.1 = 10%) and fade lengths in seconds
 audio.volume=0;
 let t0=0,outAt=null,afterOut=null;
@@ -284,9 +284,9 @@ async function findTracks(){
     for(const f of [`music${n}.mp3`,`music ${n}.mp3`]){const u="music/"+encodeURI(f);if(await probe(u)){src=u;break}else if(n===1)console.log("not found:",u)}
     if(!src)break;
     tracks.push({src,...(info[n]||{title:"music "+n,artist:"unknown artist"})});
-    if(tracks.length===1){audio.preload="auto";start(0).catch(()=>{})}
+    if(tracks.length===1){show(0);firstReady=getBlob("music",src).then(u=>{if(u)tracks[0].src=u;audio.preload="auto";start(0).catch(()=>{})})}
   }
-  if(!tracks.length){box.classList.remove("wait");$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3"}
+  if(!tracks.length){prog.music.done=true;paint();box.classList.remove("wait");$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3"}
 }
 function show(n){i=(n+tracks.length)%tracks.length;const t=tracks[i];$("#tName").textContent=t.title;$("#tArtist").textContent=t.artist}
 function start(n){show(n);audio.volume=0;if(audio.getAttribute("src")!==tracks[i].src)audio.src=tracks[i].src;return audio.play()}
@@ -306,34 +306,53 @@ $("#next").addEventListener("click",()=>fadeThen(()=>play(i+1)));
 function kick(e){if(started||!tracks.length||e.target.closest("#music"))return;play(0)}
 ["pointerdown","pointerup","keydown"].forEach(ev=>addEventListener(ev,kick));
 
-// boot: wait only for what the intro needs (wallpaper, sound, song list), then the TV turns on
+// boot: the loading screen counts the real bytes of the big files (wallpaper, sound, first song)
+// and only goes away when everything is loaded. Missing files are skipped; slow ones are waited for.
 const once=(el,...evs)=>new Promise(r=>evs.forEach(ev=>el.addEventListener(ev,r,{once:true})));
 const wait=(ms,v)=>new Promise(r=>setTimeout(()=>r(v),ms));
 const SFX_FILES=["turnon.mp3","turnon.mp4","turnon.wav","turnon.ogg","sfx/tv-on.mp3"]; // first one that exists is used
 const SFX_OFFSET=0;           // seconds. + = sound starts later than the animation, - = sound starts first
 const sfx=new Audio();sfx.preload="auto";sfx.volume=0.35; // 0.35 = 35% volume
-async function loadSfx(){
-  for(const f of SFX_FILES){
-    sfx.src=f;
-    if(await Promise.race([once(sfx,"canplaythrough").then(()=>1),once(sfx,"error").then(()=>0)]))return;
-  }
+const prog={},flags={page:0,fonts:0};let shown=0;
+function paint(){
+  let l=0,t=0;for(const k in prog){l+=prog[k].l;t+=Math.max(prog[k].t,prog[k].l)}
+  const all=Object.values(prog).length&&Object.values(prog).every(x=>x.done);
+  const bytes=t?l/t:(all?1:0);
+  shown=Math.max(shown,Math.min(100,bytes*90+flags.page*5+flags.fonts*5));
+  const cur=Object.keys(prog).find(k=>!prog[k].done)||(!flags.page?"page":!flags.fonts?"fonts":"");
+  $("#bootBar").style.width=shown+"%";
+  $("#boot span").textContent="loading "+(cur?cur+" ":"")+Math.floor(shown)+"%";
+}
+async function getBlob(name,url){            // download a file while counting bytes
+  const o=prog[name]={l:0,t:0,done:false};
+  try{
+    const r=await fetch(url);if(!r.ok)throw 0;
+    o.t=+r.headers.get("content-length")||0;paint();
+    const rd=r.body.getReader(),parts=[];
+    for(;;){const x=await rd.read();if(x.done)break;parts.push(x.value);o.l+=x.value.length;paint()}
+    return URL.createObjectURL(new Blob(parts,{type:r.headers.get("content-type")||""}));
+  }catch(e){o.l=o.t=0;return null}
+  finally{o.t=o.l||o.t;o.done=true;paint()}
 }
 async function boot(){
-  const pending=new Set(),label=$("#boot span");
-  const task=(name,p)=>{pending.add(name);label.textContent="loading "+name;
-    return Promise.resolve(p).catch(()=>{}).then(()=>{pending.delete(name);
-      label.textContent=pending.size?"loading "+[...pending][0]:"ready";$("#bootBar").style.width=(3-pending.size)/3*100+"%"})};
-  const found=findTracks();
-  await Promise.race([
-    Promise.all([
-      task("wallpaper",wall.readyState>=3||once(wall,"canplay","error")),
-      task("sound",Promise.race([loadSfx(),wait(3000)])),
-      task("music",Promise.race([found,wait(4000)])),
-      wait(500)
-    ]),
-    wait(6000) // never hang
-  ]);
-  $("#bootBar").style.width="100%";
+  prog.music={l:0,t:0,done:false};
+  const wallDone=(async()=>{
+    const u=await getBlob("wallpaper","wallpaper.mp4");
+    wall.src=u||"wallpaper.mp4";                       // if the counted download fails, load it normally
+    if(wall.readyState<4)await once(wall,"canplaythrough","error");
+  })();
+  const sfxDone=(async()=>{
+    for(const f of SFX_FILES){
+      const u=await getBlob("sound",f);
+      if(u){sfx.src=u;if(sfx.readyState<3)await once(sfx,"canplaythrough","error");return}
+    }
+  })();
+  const musicDone=findTracks().then(()=>firstReady);
+  const pageDone=(document.readyState==="complete"?Promise.resolve():once(window,"load")).then(()=>{flags.page=1;paint()});
+  const fontsDone=Promise.resolve(document.fonts&&document.fonts.ready).then(()=>{flags.fonts=1;paint()});
+  paint();
+  await Promise.all([wallDone,sfxDone,musicDone,pageDone,fontsDone,wait(500)]);
+  shown=100;paint();
   $("#boot").classList.add("hide");
   wall.play().catch(()=>{});
   const d=isFinite(sfx.duration)&&sfx.duration>0?Math.min(3.5,Math.max(1.2,sfx.duration)):1.7;
