@@ -49,6 +49,9 @@ body.nocrt #crt{display:none}
 .icon:hover,.icon:focus-visible{background:rgba(220,138,62,.3);outline:2px dashed var(--paper);outline-offset:-2px}
 .icon img,.icon svg{width:56px;height:56px;filter:drop-shadow(3px 3px 0 rgba(30,12,2,.6))}
 
+.icon.br{top:auto;left:auto;right:22px;bottom:118px}
+@media (max-width:600px){.icon.br{right:10px;bottom:calc(var(--bar) + 96px)}}
+
 /* windows */
 .win{position:fixed;z-index:10;width:min(580px,94vw);background:var(--paper);border:3px solid var(--ink);box-shadow:5px 5px 0 rgba(20,8,0,.75),0 22px 44px rgba(0,0,0,.45);display:none;transform-origin:50% 0}
 .win.open{display:block;animation:pop .3s cubic-bezier(.2,.9,.3,1.15)}
@@ -137,6 +140,11 @@ body.nocrt #crt{display:none}
   <span>discord</span>
 </button>
 
+<button class="icon br" data-open="notice" aria-label="Open notice">
+  <svg viewBox="0 0 48 48" shape-rendering="crispEdges"><path fill="#2a190e" d="M24 4L46 42H2z"/><path fill="#e8b83a" d="M24 10L40 38H8z"/><path fill="#2a190e" d="M22 18h4v12h-4zM22 32h4v4h-4z"/></svg>
+  <span>notice</span>
+</button>
+
 <section class="win" id="anims" style="top:80px;left:130px;width:min(700px,94vw)" aria-label="Anims">
   <div class="bar"><b>anims</b><button class="x" data-close aria-label="Close">x</button></div>
   <div class="body"><div class="grid" id="grid"></div></div>
@@ -160,6 +168,14 @@ body.nocrt #crt{display:none}
   <div class="body">
     <p>Want to work together or just say hi?</p>
     <button class="mail" id="copy" title="Copy my Discord name">Discord: adasynek</button>
+  </div>
+</section>
+
+<section class="win" id="notice" style="top:150px;left:300px" aria-label="Notice">
+  <div class="bar"><b>notice</b><button class="x" data-close aria-label="Close">x</button></div>
+  <div class="body">
+    <p>This website is still a work in progress.</p>
+    <p>Things might change, move around or break while I build it. More animations and features are coming soon.</p>
   </div>
 </section>
 
@@ -260,7 +276,7 @@ $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.togg
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false,firstReady=Promise.resolve();
-const VOL=0.05,FADE_IN=3,FADE_OUT=3; // music volume (0.1 = 10%) and fade lengths in seconds
+const VOL=0.1,FADE_IN=3,FADE_OUT=3; // music volume (0.1 = 10%) and fade lengths in seconds
 audio.volume=0;
 let t0=0,outAt=null,afterOut=null;
 const sec=()=>performance.now()/1000;
@@ -278,15 +294,17 @@ const probe=async src=>{
   catch(e){return new Promise(res=>{const a=new Audio(),t=setTimeout(()=>res(false),4000);
     a.onloadedmetadata=a.oncanplay=()=>{clearTimeout(t);res(true)};a.onerror=()=>{clearTimeout(t);res(false)};a.src=src})}
 };
+let firstResolve;const firstDecided=new Promise(r=>firstResolve=r);
 async function findTracks(){
   for(let n=1;n<=100;n++){
-    let src=null;
-    for(const f of [`music${n}.mp3`,`music ${n}.mp3`]){const u="music/"+encodeURI(f);if(await probe(u)){src=u;break}else if(n===1)console.log("not found:",u)}
-    if(!src)break;
+    const urls=[`music${n}.mp3`,`music ${n}.mp3`].map(f=>"music/"+encodeURI(f));
+    const ok=await Promise.all(urls.map(probe));
+    const src=urls[ok.indexOf(true)];
+    if(!src){if(n===1)console.log("not found:",...urls);break}
     tracks.push({src,...(info[n]||{title:"music "+n,artist:"unknown artist"})});
-    if(tracks.length===1){show(0);firstReady=getBlob("music",src).then(u=>{if(u)tracks[0].src=u;audio.preload="auto";start(0).catch(()=>{})})}
+    if(tracks.length===1){show(0);firstReady=getBlob("music",src).then(u=>{if(u)tracks[0].src=u;audio.preload="auto";start(0).catch(()=>{})});firstResolve(firstReady)}
   }
-  if(!tracks.length){prog.music.done=true;paint();box.classList.remove("wait");$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3"}
+  if(!tracks.length){prog.music.done=true;paint();box.classList.remove("wait");$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3";firstResolve()}
 }
 function show(n){i=(n+tracks.length)%tracks.length;const t=tracks[i];$("#tName").textContent=t.title;$("#tArtist").textContent=t.artist}
 function start(n){show(n);audio.volume=0;if(audio.getAttribute("src")!==tracks[i].src)audio.src=tracks[i].src;return audio.play()}
@@ -324,7 +342,7 @@ function paint(){
   $("#boot span").textContent="loading "+(cur?cur+" ":"")+Math.floor(shown)+"%";
 }
 async function getBlob(name,url){            // download a file while counting bytes
-  const o=prog[name]={l:0,t:0,done:false};
+  const o=prog[name]={l:0,t:0,done:false},t0=performance.now();
   try{
     const r=await fetch(url);if(!r.ok)throw 0;
     o.t=+r.headers.get("content-length")||0;paint();
@@ -332,7 +350,7 @@ async function getBlob(name,url){            // download a file while counting b
     for(;;){const x=await rd.read();if(x.done)break;parts.push(x.value);o.l+=x.value.length;paint()}
     return URL.createObjectURL(new Blob(parts,{type:r.headers.get("content-type")||""}));
   }catch(e){o.l=o.t=0;return null}
-  finally{o.t=o.l||o.t;o.done=true;paint()}
+  finally{o.t=o.l||o.t;o.done=true;paint();if(o.l)console.log("loaded "+url+": "+(o.l/1048576).toFixed(2)+" MB in "+((performance.now()-t0)/1000).toFixed(1)+"s")}
 }
 async function boot(){
   prog.music={l:0,t:0,done:false};
@@ -347,7 +365,7 @@ async function boot(){
       if(u){sfx.src=u;if(sfx.readyState<3)await once(sfx,"canplaythrough","error");return}
     }
   })();
-  const musicDone=findTracks().then(()=>firstReady);
+  findTracks();const musicDone=firstDecided;   // the rest of the songs are found in the background
   const pageDone=(document.readyState==="complete"?Promise.resolve():once(window,"load")).then(()=>{flags.page=1;paint()});
   const fontsDone=Promise.resolve(document.fonts&&document.fonts.ready).then(()=>{flags.fonts=1;paint()});
   paint();
