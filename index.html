@@ -47,12 +47,14 @@ body.nocrt #crt{display:none}
 /* desktop icon */
 .icon{position:fixed;top:22px;left:24px;z-index:5;display:grid;justify-items:center;gap:6px;width:96px;padding:8px 4px;color:var(--paper);text-shadow:0 2px 0 rgba(30,12,2,.85)}
 .icon:hover,.icon:focus-visible{background:rgba(220,138,62,.3);outline:2px dashed var(--paper);outline-offset:-2px}
-.icon svg{width:56px;height:56px;filter:drop-shadow(3px 3px 0 rgba(30,12,2,.6))}
+.icon img,.icon svg{width:56px;height:56px;filter:drop-shadow(3px 3px 0 rgba(30,12,2,.6))}
 
 /* windows */
 .win{position:fixed;z-index:10;width:min(580px,94vw);background:var(--paper);border:3px solid var(--ink);box-shadow:5px 5px 0 rgba(20,8,0,.75),0 22px 44px rgba(0,0,0,.45);display:none;transform-origin:50% 0}
 .win.open{display:block;animation:pop .3s cubic-bezier(.2,.9,.3,1.15)}
 @keyframes pop{from{transform:scale(.92,.03);opacity:0}}
+.win.closing{animation:shut .24s cubic-bezier(.5,0,.75,.45) forwards;pointer-events:none}
+@keyframes shut{to{transform:scale(.92,.03);opacity:0}}
 .bar{display:flex;align-items:center;justify-content:space-between;padding:5px 6px;background:repeating-linear-gradient(0deg,var(--orange) 0 2px,var(--orangeD) 2px 3px);border-bottom:3px solid var(--ink);cursor:grab;user-select:none;touch-action:none}
 .bar::before{content:"";width:24px}
 .bar b{font-weight:400;padding:0 16px;background:var(--paper);border:2px solid var(--ink)}
@@ -110,7 +112,7 @@ body.nocrt #crt{display:none}
 
 @media (max-width:600px){:root{--bar:52px}.win{left:3vw!important;top:64px!important}
  #music{bottom:var(--bar);width:100%;height:84px;border-left:0}#music::before{display:none}.note{display:none}}
-@media (prefers-reduced-motion:reduce){#screen.on,#screen.on::after,#screen.on .icon,#screen.on #task,#screen.on #music,#crt,#disc,.note,.win.open,.nosig span{animation:none!important}#screen.on::after{display:none}}
+@media (prefers-reduced-motion:reduce){#screen.on,#screen.on::after,#screen.on .icon,#screen.on #task,#screen.on #music,#crt,#disc,.note,.win.open,.win.closing,.nosig span{animation:none!important}#screen.on::after{display:none}}
 
 /* loading screen (shown until everything is ready) */
 #boot{position:fixed;inset:0;z-index:80;display:grid;place-content:center;justify-items:center;gap:14px;background:#000;color:var(--paper2)}
@@ -128,6 +130,11 @@ body.nocrt #crt{display:none}
 <button class="icon" data-open="anims" aria-label="Open anims folder">
   <svg viewBox="0 0 48 48" shape-rendering="crispEdges"><path fill="#2a190e" d="M3 9h15l4 5h23v29H3z"/><path fill="#e6c48f" d="M6 17h36v23H6z"/><path fill="#dc8a3e" d="M6 22h36v18H6z"/><path fill="#f1dcb6" d="M10 26h12v3H10z"/></svg>
   <span>anims</span>
+</button>
+
+<button class="icon" data-open="contact" style="left:130px" aria-label="Open Discord contact">
+  <img src="discord.png" alt="" width="56" height="56">
+  <span>discord</span>
 </button>
 
 <section class="win" id="anims" style="top:80px;left:130px;width:min(700px,94vw)" aria-label="Anims">
@@ -205,10 +212,12 @@ const wall=$("#wall");wall.muted=true;
 // windows
 function loadCards(){$$("#grid video[data-src]").forEach(v=>{v.src=v.dataset.src;v.removeAttribute("data-src")})}
 function closeWin(w){
-  w.classList.remove("open");
+  if(!w.classList.contains("open")||w.classList.contains("closing"))return;
+  w.classList.add("closing");
+  w._t=setTimeout(()=>w.classList.remove("open","closing"),240);   // matches the .24s animation
   if(w.id==="viewer"){$("#vbox").innerHTML="";if(resume){resume=false;audio.play().catch(()=>{})}}
 }
-$$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);w.classList.add("open");front(w);if(w.id==="anims")loadCards()}));
+$$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);clearTimeout(w._t);w.classList.remove("closing");w.classList.add("open");front(w);if(w.id==="anims")loadCards()}));
 $$("[data-close]").forEach(b=>b.addEventListener("click",()=>closeWin(b.closest(".win"))));
 $$(".win").forEach(w=>{
   w.addEventListener("pointerdown",()=>front(w));
@@ -222,7 +231,7 @@ $$(".win").forEach(w=>{
     bar.addEventListener("pointermove",mv);bar.addEventListener("pointerup",up);
   });
 });
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){const o=$$(".win.open").sort((a,b)=>b.style.zIndex-a.style.zIndex)[0];o&&closeWin(o)}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){const o=$$(".win.open:not(.closing)").sort((a,b)=>b.style.zIndex-a.style.zIndex)[0];o&&closeWin(o)}});
 
 // animation cards + player
 function openViewer(p){
@@ -231,7 +240,7 @@ function openViewer(p){
    :p.vimeo?`<iframe src="https://player.vimeo.com/video/${p.vimeo}?autoplay=1" allow="autoplay;fullscreen" allowfullscreen></iframe>`
    :`<video src="${p.video}" controls autoplay playsinline></video>`;
   if(!audio.paused){resume=true;audio.pause()}
-  const w=$("#viewer");w.classList.add("open");front(w);
+  const w=$("#viewer");clearTimeout(w._t);w.classList.remove("closing");w.classList.add("open");front(w);
 }
 projects.forEach(p=>{
   const src=p.youtube||p.vimeo||p.video,c=document.createElement("button");c.className="card";
@@ -300,7 +309,7 @@ function kick(e){if(started||!tracks.length||e.target.closest("#music"))return;p
 // boot: wait only for what the intro needs (wallpaper, sound, song list), then the TV turns on
 const once=(el,...evs)=>new Promise(r=>evs.forEach(ev=>el.addEventListener(ev,r,{once:true})));
 const wait=(ms,v)=>new Promise(r=>setTimeout(()=>r(v),ms));
-const SFX_FILES=["turnon.mp3","turnon.mp4","turnon.wav","turnon.ogg","sfx/turnon.mp3"]; // first one that exists is used
+const SFX_FILES=["turnon.mp3","turnon.mp4","turnon.wav","turnon.ogg","sfx/tv-on.mp3"]; // first one that exists is used
 const SFX_OFFSET=0;           // seconds. + = sound starts later than the animation, - = sound starts first
 const sfx=new Audio();sfx.preload="auto";sfx.volume=0.35; // 0.35 = 35% volume
 async function loadSfx(){
