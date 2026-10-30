@@ -272,12 +272,57 @@ $("#copy").addEventListener("click",e=>{
   const b=e.currentTarget;navigator.clipboard&&navigator.clipboard.writeText("adasynek").catch(()=>{});
   b.textContent="copied!";setTimeout(()=>b.textContent="Discord: adasynek",1400);
 });
-$("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.toggle("nocrt");e.currentTarget.setAttribute("aria-pressed",!off)});
+$("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.toggle("nocrt");e.currentTarget.setAttribute("aria-pressed",!off);setFx(!off)});
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false,firstReady=Promise.resolve();
 const VOL=0.1,FADE_IN=3,FADE_OUT=3; // music volume (0.1 = 10%) and fade lengths in seconds
 audio.volume=0;
+
+// ---- CRT SOUND: small tube-TV speaker, saturation, wobble, hiss, hum (follows the CRT on/off button) ----
+let ac,dry,wet,hissG;
+function initFx(){
+  if(ac){if(ac.state==="suspended")ac.resume();return}
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+  ac=new AC();
+  const src=ac.createMediaElementSource(audio);
+  dry=ac.createGain();wet=ac.createGain();
+  src.connect(dry);dry.connect(ac.destination);wet.connect(ac.destination);
+
+  const hp=ac.createBiquadFilter();hp.type="highpass";hp.frequency.value=140;
+  const pk=ac.createBiquadFilter();pk.type="peaking";pk.frequency.value=1800;pk.gain.value=4;pk.Q.value=.8;
+  const lp=ac.createBiquadFilter();lp.type="lowpass";lp.frequency.value=5200;lp.Q.value=.9;
+  const sh=ac.createWaveShaper(),curve=new Float32Array(1024);
+  for(let k=0;k<1024;k++){const x=k/512-1;curve[k]=Math.tanh(x*2.2)/Math.tanh(2.2)}
+  sh.curve=curve;sh.oversample="2x";
+  const dl=ac.createDelay(.05);dl.delayTime.value=.008;               // slow pitch wobble
+  const lfo=ac.createOscillator(),lg=ac.createGain();
+  lfo.frequency.value=.7;lg.gain.value=.0007;lfo.connect(lg);lg.connect(dl.delayTime);lfo.start();
+  src.connect(hp);hp.connect(pk);pk.connect(sh);sh.connect(lp);lp.connect(dl);dl.connect(wet);
+
+  const hum=ac.createOscillator(),hg=ac.createGain();                 // 50 Hz mains hum
+  hum.frequency.value=50;hg.gain.value=.004;hum.connect(hg);hg.connect(wet);hum.start();
+  const wh=ac.createOscillator(),wg=ac.createGain();                  // flyback whine
+  wh.frequency.value=15734;wg.gain.value=.0012;wh.connect(wg);wg.connect(wet);wh.start();
+
+  const nb=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate),d=nb.getChannelData(0);
+  for(let k=0;k<d.length;k++)d[k]=Math.random()*2-1;
+  const ns=ac.createBufferSource();ns.buffer=nb;ns.loop=true;
+  const nh=ac.createBiquadFilter();nh.type="highpass";nh.frequency.value=3000;
+  hissG=ac.createGain();hissG.gain.value=0;
+  ns.connect(nh);nh.connect(hissG);hissG.connect(wet);ns.start();
+
+  setFx(!document.body.classList.contains("nocrt"));
+  if(ac.state==="suspended")ac.resume();
+}
+function setFx(on){
+  if(!ac)return;
+  dry.gain.setTargetAtTime(on?0:1,ac.currentTime,.05);
+  wet.gain.setTargetAtTime(on?1.1:0,ac.currentTime,.05);
+}
+const hiss=on=>{if(hissG)hissG.gain.setTargetAtTime(on?.006:0,ac.currentTime,.3)};
+["pointerdown","keydown"].forEach(ev=>addEventListener(ev,()=>{if(ac&&ac.state==="suspended")ac.resume()}));
+
 let t0=0,outAt=null,afterOut=null;
 const sec=()=>performance.now()/1000;
 function tick(){                      // runs every frame while music plays and sets the volume
@@ -314,8 +359,8 @@ function toggle(){
   if(!audio.src)return play(0);
   if(audio.paused){userPaused=false;audio.play().catch(()=>{})}else{userPaused=true;fadeThen(()=>audio.pause())}
 }
-audio.addEventListener("play",()=>{box.classList.add("on");box.classList.remove("wait");started=true;t0=sec();outAt=afterOut=null;requestAnimationFrame(tick);["pointerdown","pointerup","keydown"].forEach(ev=>removeEventListener(ev,kick))});
-audio.addEventListener("pause",()=>box.classList.remove("on"));
+audio.addEventListener("play",()=>{initFx();hiss(true);box.classList.add("on");box.classList.remove("wait");started=true;t0=sec();outAt=afterOut=null;requestAnimationFrame(tick);["pointerdown","pointerup","keydown"].forEach(ev=>removeEventListener(ev,kick))});
+audio.addEventListener("pause",()=>{hiss(false);box.classList.remove("on")});
 audio.addEventListener("ended",()=>play(i+1));
 audio.addEventListener("timeupdate",()=>{$("#fill").style.width=(audio.duration?audio.currentTime/audio.duration*100:0)+"%"});
 $("#disc").addEventListener("click",toggle);
