@@ -276,7 +276,7 @@ $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.togg
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false,firstReady=Promise.resolve();
-const VOL=0.1,FADE_IN=3,FADE_OUT=3; // music volume (0.1 = 10%) and fade lengths in seconds
+const VOL=0.06,FADE_IN=4,FADE_OUT=4; // music volume (0.1 = 10%) and fade lengths in seconds
 audio.volume=0;
 
 // ---- CRT SOUND: small tube-TV speaker, saturation, wobble, hiss, hum (follows the CRT on/off button) ----
@@ -295,9 +295,9 @@ function initFx(){
   const hp=eq("highpass",190,undefined,.9);            // tiny speaker: almost no bass
   const box=eq("peaking",280,6,1.3);                   // plastic cabinet boxiness
   const dip=eq("peaking",800,-3,1);                    // hollow mids
-  const nas=eq("peaking",2300,7,1.5);                  // nasal / honky TV voice
-  const edge=eq("peaking",3600,4,2);                   // harsh cone edge
-  const lp=eq("lowpass",4300,undefined,1.4);           // resonant top roll-off
+  const nas=eq("peaking",2300,2,1.2);                  // softer midrange so it sits behind you
+  const edge=eq("peaking",3600,-2,2);                  // take the harsh edge off
+  const lp=eq("lowpass",3400,undefined,.8);            // muffled, distant top roll-off
   const lp2=eq("lowpass",6500,undefined,.7);           // steeper cut, no sparkle
   const sh=ac.createWaveShaper(),curve=new Float32Array(1024);
   for(let k=0;k<1024;k++){const x=k/512-1;curve[k]=Math.tanh(x*2.2)/Math.tanh(2.2)}
@@ -307,6 +307,12 @@ function initFx(){
   lfo.frequency.value=.7;lg.gain.value=.0007;lfo.connect(lg);lg.connect(dl.delayTime);lfo.start();
   src.connect(mono);mono.connect(hp);hp.connect(box);box.connect(dip);dip.connect(nas);nas.connect(edge);
   edge.connect(sh);sh.connect(lp);lp.connect(lp2);lp2.connect(dl);dl.connect(wet);
+  // small-room reverb so the music sounds like it is playing across the room
+  const rl=ac.sampleRate*1.6,ir=ac.createBuffer(2,rl,ac.sampleRate);
+  for(let c=0;c<2;c++){const ch=ir.getChannelData(c);for(let k=0;k<rl;k++)ch[k]=(Math.random()*2-1)*Math.pow(1-k/rl,3)}
+  const rv=ac.createConvolver();rv.buffer=ir;
+  const rg=ac.createGain();rg.gain.value=.35;
+  lp2.connect(rv);rv.connect(rg);rg.connect(wet);
 
   const hum=ac.createOscillator(),hg=ac.createGain();                 // 50 Hz mains hum
   hum.frequency.value=50;hg.gain.value=.004;hum.connect(hg);hg.connect(wet);hum.start();
@@ -424,6 +430,13 @@ async function boot(){
   paint();
   await Promise.all([wallDone,sfxDone,musicDone,pageDone,fontsDone,wait(500)]);
   shown=100;paint();
+  await wait(200);
+  if(tracks.length&&audio.paused){   // browser blocked sound: wait for one click, which also starts the music
+    $("#boot span").textContent="click to turn on";
+    $("#boot b").style.display="none";
+    await new Promise(r=>["pointerdown","keydown"].forEach(ev=>addEventListener(ev,r,{once:true})));
+    if(audio.paused)play(0);
+  }
   $("#boot").classList.add("hide");
   wall.play().catch(()=>{});
   const d=isFinite(sfx.duration)&&sfx.duration>0?Math.min(3.5,Math.max(1.2,sfx.duration)):1.7;
