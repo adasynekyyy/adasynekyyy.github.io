@@ -276,7 +276,7 @@ $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.togg
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false,firstReady=Promise.resolve();
-const VOL=0.01,FADE_IN=4,FADE_OUT=4; // music volume (0.1 = 10%) and fade lengths in seconds
+const VOL=0.005,FADE_IN=4,FADE_OUT=4; // music volume (0.1 = 10%) and fade lengths in seconds
 audio.volume=0;
 
 // ---- CRT SOUND: small tube-TV speaker, saturation, wobble, hiss, hum (follows the CRT on/off button) ----
@@ -334,7 +334,7 @@ function setFx(on){
   dry.gain.setTargetAtTime(on?0:1,ac.currentTime,.05);
   wet.gain.setTargetAtTime(on?1.1:0,ac.currentTime,.05);
 }
-const hiss=on=>{if(hissG)hissG.gain.setTargetAtTime(on?.006:0,ac.currentTime,.3)};
+const hiss=on=>{if(hissG)hissG.gain.setTargetAtTime(on?.0025:0,ac.currentTime,.3)};
 ["pointerdown","keydown"].forEach(ev=>addEventListener(ev,()=>{if(ac&&ac.state==="suspended")ac.resume()}));
 
 let t0=0,outAt=null,afterOut=null;
@@ -389,7 +389,7 @@ const once=(el,...evs)=>new Promise(r=>evs.forEach(ev=>el.addEventListener(ev,r,
 const wait=(ms,v)=>new Promise(r=>setTimeout(()=>r(v),ms));
 const SFX_FILES=["turnon.mp3","turnon.mp4","turnon.wav","turnon.ogg","sfx/tv-on.mp3"]; // first one that exists is used
 const SFX_OFFSET=0;           // seconds. + = sound starts later than the animation, - = sound starts first
-const sfx=new Audio();sfx.preload="auto";sfx.volume=0.35; // 0.35 = 35% volume
+const sfx=new Audio();sfx.preload="auto";sfx.volume=0.15; // 0.35 = 35% volume
 const prog={},flags={page:0,fonts:0};let shown=0;
 function paint(){
   let l=0,t=0;for(const k in prog){l+=prog[k].l;t+=Math.max(prog[k].t,prog[k].l)}
