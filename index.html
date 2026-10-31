@@ -389,7 +389,7 @@ const once=(el,...evs)=>new Promise(r=>evs.forEach(ev=>el.addEventListener(ev,r,
 const wait=(ms,v)=>new Promise(r=>setTimeout(()=>r(v),ms));
 const SFX_FILES=["sfx/turn-on.mp3","turn-on.mp3","turnon.mp3","turnon.mp4","turnon.wav","turnon.ogg","sfx/tv-on.mp3"]; // first one that exists is used
 const TV_TIME=0.9;            // seconds the turn-on animation lasts (smaller = faster)
-const SFX_OFFSET=0;         // seconds. + = sound starts later than the animation, - = sound starts first
+const SFX_OFFSET=TV_TIME*0.5; // sound hits exactly when the screen pops open (halfway through the animation).        // seconds. + = sound starts later than the animation, - = sound starts first
 const sfx=new Audio();sfx.preload="auto";sfx.volume=0.15; // 0.35 = 35% volume
 const prog={},flags={page:0,fonts:0};let shown=0;
 function paint(){
