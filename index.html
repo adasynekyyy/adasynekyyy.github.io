@@ -420,12 +420,13 @@ function initSfxEq(){
 const UI_VOL=0.10;   // 0.10 = 10% volume
 const UI_EQ=false;   // true = also run hover/click through the EQ above (the +12 dB bass makes them boomy)
 const UI_SEL=".icon,.dot,.card,.mail,.x,#disc,#next";
-const uiBuf={};let sfxIn=null;
+const uiBuf={};let sfxIn=null,lastWin=0;
 function loadUi(){
   ["hover","click","window-open","window-close"].forEach(n=>fetch("sfx/"+n+".mp3").then(r=>r.ok?r.arrayBuffer():Promise.reject()).then(b=>sac.decodeAudioData(b)).then(d=>uiBuf[n]=d).catch(()=>{}));
 }
 function uiPlay(n){
   if(!sac||!uiBuf[n])return;
+  if(n.startsWith("window"))lastWin=performance.now();
   if(sac.state==="suspended")sac.resume();
   const s=sac.createBufferSource(),g=sac.createGain();
   s.buffer=uiBuf[n];g.gain.value=UI_VOL;
@@ -436,7 +437,7 @@ document.addEventListener("pointerover",e=>{
   const t=e.target.closest&&e.target.closest(UI_SEL);
   if(t&&!t.contains(e.relatedTarget))uiPlay("hover");
 });
-document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(UI_SEL))uiPlay("click")});
+document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(UI_SEL)&&performance.now()-lastWin>60)uiPlay("click")}); // no click sound when a window sound just played
 
 const prog={},flags={page:0,fonts:0};let shown=0;
 function paint(){
