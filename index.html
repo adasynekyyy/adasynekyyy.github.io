@@ -391,6 +391,28 @@ const SFX_FILES=["sfx/turn-on.mp3","turn-on.mp3","turnon.mp3","turnon.mp4","turn
 const TV_TIME=0.9;            // seconds the turn-on animation lasts (smaller = faster)
 const SFX_OFFSET=TV_TIME*0.5; // sound hits exactly when the screen pops open (halfway through the animation).        // seconds. + = sound starts later than the animation, - = sound starts first
 const sfx=new Audio();sfx.preload="auto";sfx.volume=0.15; // 0.35 = 35% volume
+
+// ---- SFX EQUALIZER (settings from the 10-band graphic EQ) ----
+const SFX_PREAMP=0; // dB. If the +12 dB bass clips, try -6
+const SFX_EQ=[[32,12],[64,12],[125,12],[250,12],[500,-12],[1000,0],[2000,0],[4000,0],[8000,0],[16000,0]]; // [Hz, dB]
+let sac=null;
+function initSfxEq(){
+  if(sac){if(sac.state==="suspended")sac.resume();return}
+  const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return;
+  sac=new AC();
+  const src=sac.createMediaElementSource(sfx);
+  const pre=sac.createGain();pre.gain.value=Math.pow(10,SFX_PREAMP/20);
+  src.connect(pre);
+  let node=pre;
+  SFX_EQ.forEach(([f,g],k)=>{
+    const b=sac.createBiquadFilter();
+    b.type=k===0?"lowshelf":"peaking";   // lowest band as a shelf so the bass boost stays flat like the graph
+    b.frequency.value=f;b.gain.value=g;b.Q.value=1;
+    node.connect(b);node=b;
+  });
+  node.connect(sac.destination);
+}
+
 const prog={},flags={page:0,fonts:0};let shown=0;
 function paint(){
   let l=0,t=0;for(const k in prog){l+=prog[k].l;t+=Math.max(prog[k].t,prog[k].l)}
@@ -443,7 +465,7 @@ async function boot(){
   const d=TV_TIME;
   document.documentElement.style.setProperty("--tv",d+"s");   // animation lasts as long as the sound
   const go=()=>$("#screen").classList.replace("off","on");
-  const ring=()=>{sfx.currentTime=0;sfx.play().catch(()=>{})};
+  const ring=()=>{initSfxEq();sfx.currentTime=0;sfx.play().catch(()=>{})};
   const later=(f,sec)=>sec>0?setTimeout(f,sec*1000):f();
   if(SFX_OFFSET>=0){go();later(ring,SFX_OFFSET)}else{ring();later(go,-SFX_OFFSET)}
 }
