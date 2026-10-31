@@ -388,7 +388,8 @@ function kick(e){if(started||!tracks.length||e.target.closest("#music"))return;p
 const once=(el,...evs)=>new Promise(r=>evs.forEach(ev=>el.addEventListener(ev,r,{once:true})));
 const wait=(ms,v)=>new Promise(r=>setTimeout(()=>r(v),ms));
 const SFX_FILES=["sfx/turn-on.mp3","turn-on.mp3","turnon.mp3","turnon.mp4","turnon.wav","turnon.ogg","sfx/tv-on.mp3"]; // first one that exists is used
-const SFX_OFFSET=0.9;          // seconds. + = sound starts later than the animation, - = sound starts first
+const TV_TIME=0.9;            // seconds the turn-on animation lasts (smaller = faster)
+const SFX_OFFSET=0;         // seconds. + = sound starts later than the animation, - = sound starts first
 const sfx=new Audio();sfx.preload="auto";sfx.volume=0.15; // 0.35 = 35% volume
 const prog={},flags={page:0,fonts:0};let shown=0;
 function paint(){
@@ -439,7 +440,7 @@ async function boot(){
   }
   $("#boot").classList.add("hide");
   wall.play().catch(()=>{});
-  const d=isFinite(sfx.duration)&&sfx.duration>0?Math.min(3.5,Math.max(1.2,sfx.duration)):1.7;
+  const d=TV_TIME;
   document.documentElement.style.setProperty("--tv",d+"s");   // animation lasts as long as the sound
   const go=()=>$("#screen").classList.replace("off","on");
   const ring=()=>{sfx.currentTime=0;sfx.play().catch(()=>{})};
