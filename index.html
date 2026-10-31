@@ -276,7 +276,7 @@ $("#crtBtn").addEventListener("click",e=>{const off=document.body.classList.togg
 
 // music: finds music1.mp3, music2.mp3 ... in /music until one is missing
 const audio=$("#audio"),box=$("#music");let tracks=[],i=0,started=false,userPaused=false,firstReady=Promise.resolve();
-const VOL=0.06,FADE_IN=4,FADE_OUT=4; // music volume (0.1 = 10%) and fade lengths in seconds
+const VOL=0.01,FADE_IN=4,FADE_OUT=4; // music volume (0.1 = 10%) and fade lengths in seconds
 audio.volume=0;
 
 // ---- CRT SOUND: small tube-TV speaker, saturation, wobble, hiss, hum (follows the CRT on/off button) ----
