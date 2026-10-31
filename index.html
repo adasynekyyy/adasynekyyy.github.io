@@ -50,7 +50,8 @@ body.nocrt #crt{display:none}
 .icon img,.icon svg{width:56px;height:56px;filter:drop-shadow(3px 3px 0 rgba(30,12,2,.6))}
 
 .icon.br{top:auto;left:auto;right:22px;bottom:118px}
-@media (max-width:600px){.icon.br{right:10px;bottom:calc(var(--bar) + 96px)}}
+.icon.bl{top:auto;bottom:calc(var(--bar) + 16px)}
+@media (max-width:600px){.icon.br{right:10px;bottom:calc(var(--bar) + 96px)}.icon.bl{bottom:calc(var(--bar) + 96px)}}
 
 /* windows */
 .win{position:fixed;z-index:10;width:min(580px,94vw);background:var(--paper);border:3px solid var(--ink);box-shadow:5px 5px 0 rgba(20,8,0,.75),0 22px 44px rgba(0,0,0,.45);display:none;transform-origin:50% 0}
@@ -123,6 +124,23 @@ body.nocrt #crt{display:none}
 #sc{display:block;width:100%;max-width:320px;margin:0 auto;aspect-ratio:1;image-rendering:pixelated;background:#1d0f06;border:2px solid var(--ink);touch-action:none;cursor:pointer}
 .hint{margin-top:8px;font-size:13px;color:var(--orangeD);text-align:center}
 
+/* minesweeper */
+.mh{align-items:center;max-width:324px}
+.lcd{background:#1d0f06;color:var(--red);border:2px solid var(--ink);padding:2px 8px;min-width:56px;text-align:center;letter-spacing:2px}
+.mb{padding:4px 10px;background:var(--orange);border:2px solid var(--ink);box-shadow:2px 2px 0 var(--ink)}
+.mb:hover{background:var(--yellow)}
+.mb:active,.mb[aria-pressed="true"]{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+.mb[aria-pressed="true"]{background:var(--yellow)}
+.hint .mb{margin-bottom:6px}
+#msGrid{display:grid;grid-template-columns:repeat(9,1fr);max-width:324px;margin:0 auto;border:2px solid var(--ink);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.mc{aspect-ratio:1;display:grid;place-items:center;font-size:18px;line-height:1;background:var(--paper2);box-shadow:inset 2px 2px 0 var(--paper),inset -2px -2px 0 var(--orangeD)}
+.mc.r{background:var(--paper);box-shadow:inset 0 0 0 1px rgba(168,90,34,.35)}
+.mc.fl{color:var(--red)}
+.mc.m{color:var(--ink)}
+.mc.boom{background:var(--red);color:var(--paper)}
+.mc.n1{color:#4a5f86}.mc.n2{color:#5f7f3f}.mc.n3{color:#c8402a}.mc.n4{color:#6b3a86}
+.mc.n5{color:#a85a22}.mc.n6{color:#3f8a8a}.mc.n7{color:#2a190e}.mc.n8{color:#7a7a7a}
+
 /* custom cursor: drawn under the CRT overlay so the CRT effect applies to it */
 #cur{position:fixed;left:0;top:0;z-index:89;width:18px;height:30px;pointer-events:none;opacity:0;will-change:transform;filter:drop-shadow(0 0 3px rgba(220,138,62,.6)) drop-shadow(1px 1px 0 rgba(30,12,2,.7))}
 #cur.on{opacity:1}
@@ -151,9 +169,14 @@ body.nocrt #cur{display:none}
   <span>anims</span>
 </button>
 
-<button class="icon" data-open="snake" style="top:126px" aria-label="Open snake game">
+<button class="icon bl" data-open="snake" aria-label="Open snake game">
   <svg viewBox="0 0 48 48" shape-rendering="crispEdges"><path fill="#2a190e" d="M6 6h36v36H6z"/><path fill="#241208" d="M9 9h30v30H9z"/><path fill="#dc8a3e" d="M13 15h16v5H13zM13 20h5v8h-5zM13 28h17v5H13z"/><path fill="#e8b83a" d="M30 28h5v5h-5z"/><path fill="#c8402a" d="M31 15h5v5h-5z"/></svg>
   <span>snake</span>
+</button>
+
+<button class="icon bl" data-open="mines" style="left:130px" aria-label="Open minesweeper">
+  <svg viewBox="0 0 48 48" shape-rendering="crispEdges"><path fill="#2a190e" d="M6 6h36v36H6z"/><path fill="#e6c48f" d="M9 9h30v30H9z"/><path fill="#2a190e" d="M20 13h8v5h-8zM13 20h5v8h-5zM30 20h5v8h-5zM20 30h8v5h-8zM18 18h12v12H18z"/><path fill="#f1dcb6" d="M20 20h3v3h-3z"/></svg>
+  <span>mines</span>
 </button>
 
 <button class="icon" data-open="contact" style="left:130px" aria-label="Open Discord contact">
@@ -182,6 +205,15 @@ body.nocrt #cur{display:none}
     <div class="hud"><span>score <b id="sScore">0</b></span><span>best <b id="sBest">0</b></span></div>
     <canvas id="sc" width="320" height="320" aria-label="Snake game"></canvas>
     <p class="hint">arrows / wasd to move, space to pause</p>
+  </div>
+</section>
+
+<section class="win" id="mines" style="top:100px;left:230px;width:min(380px,94vw)" aria-label="Minesweeper">
+  <div class="bar"><b>minesweeper</b><button class="x" data-close aria-label="Close">x</button></div>
+  <div class="body">
+    <div class="hud mh"><span class="lcd" id="msLeft">010</span><button class="mb" id="msFace" aria-label="New game">:)</button><span class="lcd" id="msTime">000</span></div>
+    <div id="msGrid" aria-label="Minesweeper board"></div>
+    <div class="hint"><button class="mb" id="msFlagBtn" aria-pressed="false">flag mode</button><br>click to dig, right-click to flag</div>
   </div>
 </section>
 
@@ -264,9 +296,10 @@ function closeWin(w){
   w.classList.add("closing");
   w._t=setTimeout(()=>w.classList.remove("open","closing"),240);   // matches the .24s animation
   if(w.id==="snake")snakePause();
+  if(w.id==="mines")minesPause();
   if(w.id==="viewer"){$("#vbox").innerHTML="";if(resume){resume=false;audio.play().catch(()=>{})}}
 }
-$$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);if(!w.classList.contains("open")||w.classList.contains("closing"))uiPlay("window-open");clearTimeout(w._t);w.classList.remove("closing");w.classList.add("open");front(w);if(w.id==="anims")loadCards();if(w.id==="snake")snakeOpen()}));
+$$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);if(!w.classList.contains("open")||w.classList.contains("closing"))uiPlay("window-open");clearTimeout(w._t);w.classList.remove("closing");w.classList.add("open");front(w);if(w.id==="anims")loadCards();if(w.id==="snake")snakeOpen();if(w.id==="mines")minesOpen()}));
 $$("[data-close]").forEach(b=>b.addEventListener("click",()=>closeWin(b.closest(".win"))));
 $$(".win").forEach(w=>{
   w.addEventListener("pointerdown",()=>front(w));
@@ -451,7 +484,7 @@ function initSfxEq(){
 // ---- UI SOUNDS: hover + click (sfx/hover.mp3, sfx/click.mp3) ----
 const UI_VOL=0.10;   // 0.10 = 10% volume
 const UI_EQ=false;   // true = also run hover/click through the EQ above (the +12 dB bass makes them boomy)
-const UI_SEL=".icon,.dot,.card,.mail,.x,#disc,#next";
+const UI_SEL=".icon,.dot,.card,.mail,.mb,.x,#disc,#next";
 const uiBuf={};let sfxIn=null,lastWin=0;
 function loadUi(){
   ["hover","click","window-open","window-close"].forEach(n=>fetch("sfx/"+n+".mp3").then(r=>r.ok?r.arrayBuffer():Promise.reject()).then(b=>sac.decodeAudioData(b)).then(d=>uiBuf[n]=d).catch(()=>{}));
@@ -604,10 +637,102 @@ sc.addEventListener("pointerup",e=>{
 });
 snakeReset();
 
+// ---- MINESWEEPER (9x9, 10 mines) ----
+const MS={w:9,h:9,m:10,mine:[],adj:[],rev:[],flag:[],el:[],state:"ready",left:0,boom:-1,t0:0,acc:0,tm:null,flagMode:false};
+const msGrid=$("#msGrid");
+function msNb(i){
+  const x=i%MS.w,y=(i/MS.w)|0,r=[];
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    if(!dx&&!dy)continue;
+    const a=x+dx,b=y+dy;if(a>=0&&b>=0&&a<MS.w&&b<MS.h)r.push(b*MS.w+a);
+  }
+  return r;
+}
+function msNew(){
+  const n=MS.w*MS.h;
+  MS.mine=Array(n).fill(false);MS.adj=Array(n).fill(0);MS.rev=Array(n).fill(false);MS.flag=Array(n).fill(false);
+  MS.state="ready";MS.left=n-MS.m;MS.boom=-1;MS.acc=0;MS.t0=0;clearInterval(MS.tm);
+  msGrid.innerHTML="";MS.el=[];
+  for(let i=0;i<n;i++){const c=document.createElement("div");c.className="mc";c.dataset.i=i;msGrid.append(c);MS.el.push(c)}
+  msTick();msDraw();
+}
+function msPlace(safe){            // mines are placed after the first click, so it is always safe and opens up
+  const ban=new Set([safe,...msNb(safe)]),cand=[];
+  for(let i=0;i<MS.w*MS.h;i++)if(!ban.has(i))cand.push(i);
+  for(let k=0;k<MS.m;k++){const j=k+Math.floor(Math.random()*(cand.length-k));[cand[k],cand[j]]=[cand[j],cand[k]];MS.mine[cand[k]]=true}
+  for(let i=0;i<MS.mine.length;i++)MS.adj[i]=msNb(i).filter(j=>MS.mine[j]).length;
+}
+function msReveal(i){              // flood fill through empty cells
+  const st=[i];
+  while(st.length){
+    const k=st.pop();if(MS.rev[k]||MS.flag[k])continue;
+    MS.rev[k]=true;MS.left--;
+    if(MS.adj[k]===0)msNb(k).forEach(j=>{if(!MS.rev[j])st.push(j)});
+  }
+}
+function msCell(i){
+  if(MS.rev[i]||MS.flag[i]||MS.state==="lost")return;
+  if(MS.mine[i]){MS.boom=i;MS.state="lost";msStop();uiPlay("window-close");return}
+  msReveal(i);
+}
+function msChord(i){               // click a number whose flags match it to open the other neighbours
+  if(!MS.adj[i])return;
+  const nb=msNb(i);
+  if(nb.filter(j=>MS.flag[j]).length!==MS.adj[i])return;
+  nb.forEach(j=>msCell(j));
+}
+function msClick(i){
+  if(MS.state==="won"||MS.state==="lost")return;
+  if(MS.flagMode)return msFlag(i);
+  if(MS.rev[i])msChord(i);
+  else{
+    if(MS.flag[i])return;
+    if(MS.state==="ready"){msPlace(i);MS.state="playing";msTimer()}
+    msCell(i);
+  }
+  if(MS.state==="playing"&&MS.left===0){
+    MS.state="won";msStop();
+    MS.mine.forEach((m,k)=>{if(m)MS.flag[k]=true});
+    uiPlay("window-open");
+  }else if(MS.state==="playing")uiPlay("hover");
+  msDraw();
+}
+function msFlag(i){
+  if(MS.rev[i]||MS.state==="won"||MS.state==="lost")return;
+  MS.flag[i]=!MS.flag[i];uiPlay("hover");msDraw();
+}
+function msDraw(){
+  MS.el.forEach((c,i)=>{
+    let cls="mc",t="";
+    if(MS.rev[i]){cls+=" r";if(MS.adj[i]){t=MS.adj[i];cls+=" n"+MS.adj[i]}}
+    else if(MS.flag[i]){
+      if(MS.state==="lost"&&!MS.mine[i]){cls+=" r";t="\u00d7"}else{cls+=" fl";t="\u25b2"}
+    }else if(MS.state==="lost"&&MS.mine[i]){cls+=" r m"+(i===MS.boom?" boom":"");t="\u25cf"}
+    c.className=cls;c.textContent=t;
+  });
+  const flags=MS.flag.filter(Boolean).length;
+  $("#msLeft").textContent=String(Math.max(-99,MS.m-flags)).padStart(3,"0");
+  $("#msFace").textContent=MS.state==="won"?"B)":MS.state==="lost"?"X(":":)";
+}
+const msElapsed=()=>MS.acc+(MS.t0?(performance.now()-MS.t0)/1000:0);
+function msTick(){$("#msTime").textContent=String(Math.min(999,msElapsed()|0)).padStart(3,"0")}
+function msTimer(){MS.t0=performance.now();clearInterval(MS.tm);MS.tm=setInterval(msTick,250)}
+function msStop(){if(MS.t0){MS.acc=msElapsed();MS.t0=0}clearInterval(MS.tm);msTick()}
+function minesPause(){if(MS.state==="playing")msStop()}
+function minesOpen(){
+  if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();
+  if(MS.state==="playing")msTimer();
+}
+msGrid.addEventListener("click",e=>{const c=e.target.closest(".mc");if(c)msClick(+c.dataset.i)});
+msGrid.addEventListener("contextmenu",e=>{e.preventDefault();const c=e.target.closest(".mc");if(c)msFlag(+c.dataset.i)});
+$("#msFace").addEventListener("click",msNew);
+$("#msFlagBtn").addEventListener("click",e=>{MS.flagMode=!MS.flagMode;e.currentTarget.setAttribute("aria-pressed",MS.flagMode)});
+msNew();
+
 // ---- CRT CURSOR + MOUSE PARALLAX ----
 (function(){
   const fine=matchMedia("(pointer:fine)").matches,reduce=matchMedia("(prefers-reduced-motion:reduce)").matches;
-  const cur=$("#cur"),icons=$$(".icon"),HOT="button,a,.card,[data-open],video[controls],input";
+  const cur=$("#cur"),icons=$$(".icon"),HOT="button,a,.card,.mc,[data-open],video[controls],input";
   const MAX=0.025;                      // wallpaper shift as a fraction of the screen (bigger = stronger parallax)
   const ICON=0.3;                       // icons move this much of the wallpaper amount (depth)
   let tx=0,ty=0,cx=0,cy=0,run=false;
