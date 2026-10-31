@@ -229,11 +229,12 @@ const wall=$("#wall");wall.muted=true;
 function loadCards(){$$("#grid video[data-src]").forEach(v=>{v.src=v.dataset.src;v.removeAttribute("data-src")})}
 function closeWin(w){
   if(!w.classList.contains("open")||w.classList.contains("closing"))return;
+  uiPlay("window-close");
   w.classList.add("closing");
   w._t=setTimeout(()=>w.classList.remove("open","closing"),240);   // matches the .24s animation
   if(w.id==="viewer"){$("#vbox").innerHTML="";if(resume){resume=false;audio.play().catch(()=>{})}}
 }
-$$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);clearTimeout(w._t);w.classList.remove("closing");w.classList.add("open");front(w);if(w.id==="anims")loadCards()}));
+$$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);if(!w.classList.contains("open")||w.classList.contains("closing"))uiPlay("window-open");clearTimeout(w._t);w.classList.remove("closing");w.classList.add("open");front(w);if(w.id==="anims")loadCards()}));
 $$("[data-close]").forEach(b=>b.addEventListener("click",()=>closeWin(b.closest(".win"))));
 $$(".win").forEach(w=>{
   w.addEventListener("pointerdown",()=>front(w));
@@ -256,7 +257,7 @@ function openViewer(p){
    :p.vimeo?`<iframe src="https://player.vimeo.com/video/${p.vimeo}?autoplay=1" allow="autoplay;fullscreen" allowfullscreen></iframe>`
    :`<video src="${p.video}" controls autoplay playsinline></video>`;
   if(!audio.paused){resume=true;audio.pause()}
-  const w=$("#viewer");clearTimeout(w._t);w.classList.remove("closing");w.classList.add("open");front(w);
+  const w=$("#viewer");if(!w.classList.contains("open")||w.classList.contains("closing"))uiPlay("window-open");clearTimeout(w._t);w.classList.remove("closing");w.classList.add("open");front(w);
 }
 projects.forEach(p=>{
   const src=p.youtube||p.vimeo||p.video,c=document.createElement("button");c.className="card";
@@ -421,7 +422,7 @@ const UI_EQ=false;   // true = also run hover/click through the EQ above (the +1
 const UI_SEL=".icon,.dot,.card,.mail,.x,#disc,#next";
 const uiBuf={};let sfxIn=null;
 function loadUi(){
-  ["hover","click"].forEach(n=>fetch("sfx/"+n+".mp3").then(r=>r.ok?r.arrayBuffer():Promise.reject()).then(b=>sac.decodeAudioData(b)).then(d=>uiBuf[n]=d).catch(()=>{}));
+  ["hover","click","window-open","window-close"].forEach(n=>fetch("sfx/"+n+".mp3").then(r=>r.ok?r.arrayBuffer():Promise.reject()).then(b=>sac.decodeAudioData(b)).then(d=>uiBuf[n]=d).catch(()=>{}));
 }
 function uiPlay(n){
   if(!sac||!uiBuf[n])return;
