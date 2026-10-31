@@ -117,6 +117,12 @@ body.nocrt #crt{display:none}
  #music{bottom:var(--bar);width:100%;height:84px;border-left:0}#music::before{display:none}.note{display:none}}
 @media (prefers-reduced-motion:reduce){#screen.on,#screen.on::after,#screen.on .icon,#screen.on #task,#screen.on #music,#crt,#disc,.note,.win.open,.win.closing,.nosig span{animation:none!important}#screen.on::after{display:none}}
 
+/* snake */
+.hud{display:flex;justify-content:space-between;max-width:320px;margin:0 auto 8px}
+.hud b{font-weight:400;color:var(--orangeD)}
+#sc{display:block;width:100%;max-width:320px;margin:0 auto;aspect-ratio:1;image-rendering:pixelated;background:#1d0f06;border:2px solid var(--ink);touch-action:none;cursor:pointer}
+.hint{margin-top:8px;font-size:13px;color:var(--orangeD);text-align:center}
+
 /* custom cursor: drawn under the CRT overlay so the CRT effect applies to it */
 #cur{position:fixed;left:0;top:0;z-index:89;width:18px;height:30px;pointer-events:none;opacity:0;will-change:transform;filter:drop-shadow(0 0 3px rgba(220,138,62,.6)) drop-shadow(1px 1px 0 rgba(30,12,2,.7))}
 #cur.on{opacity:1}
@@ -145,6 +151,11 @@ body.nocrt #cur{display:none}
   <span>anims</span>
 </button>
 
+<button class="icon" data-open="snake" style="top:126px" aria-label="Open snake game">
+  <svg viewBox="0 0 48 48" shape-rendering="crispEdges"><path fill="#2a190e" d="M6 6h36v36H6z"/><path fill="#241208" d="M9 9h30v30H9z"/><path fill="#dc8a3e" d="M13 15h16v5H13zM13 20h5v8h-5zM13 28h17v5H13z"/><path fill="#e8b83a" d="M30 28h5v5h-5z"/><path fill="#c8402a" d="M31 15h5v5h-5z"/></svg>
+  <span>snake</span>
+</button>
+
 <button class="icon" data-open="contact" style="left:130px" aria-label="Open Discord contact">
   <img src="discord.png" alt="" width="56" height="56">
   <span>discord</span>
@@ -163,6 +174,15 @@ body.nocrt #cur{display:none}
 <section class="win" id="viewer" style="top:60px;left:200px;width:min(760px,94vw)" aria-label="Player">
   <div class="bar"><b id="vtitle">player</b><button class="x" data-close aria-label="Close">x</button></div>
   <div class="body"><div id="vbox"></div></div>
+</section>
+
+<section class="win" id="snake" style="top:90px;left:210px;width:min(380px,94vw)" aria-label="Snake">
+  <div class="bar"><b>snake</b><button class="x" data-close aria-label="Close">x</button></div>
+  <div class="body">
+    <div class="hud"><span>score <b id="sScore">0</b></span><span>best <b id="sBest">0</b></span></div>
+    <canvas id="sc" width="320" height="320" aria-label="Snake game"></canvas>
+    <p class="hint">arrows / wasd to move, space to pause</p>
+  </div>
 </section>
 
 <section class="win" id="about" style="top:120px;left:190px" aria-label="About">
@@ -243,9 +263,10 @@ function closeWin(w){
   uiPlay("window-close");
   w.classList.add("closing");
   w._t=setTimeout(()=>w.classList.remove("open","closing"),240);   // matches the .24s animation
+  if(w.id==="snake")snakePause();
   if(w.id==="viewer"){$("#vbox").innerHTML="";if(resume){resume=false;audio.play().catch(()=>{})}}
 }
-$$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);if(!w.classList.contains("open")||w.classList.contains("closing"))uiPlay("window-open");clearTimeout(w._t);w.classList.remove("closing");w.classList.add("open");front(w);if(w.id==="anims")loadCards()}));
+$$("[data-open]").forEach(b=>b.addEventListener("click",()=>{const w=$("#"+b.dataset.open);if(!w.classList.contains("open")||w.classList.contains("closing"))uiPlay("window-open");clearTimeout(w._t);w.classList.remove("closing");w.classList.add("open");front(w);if(w.id==="anims")loadCards();if(w.id==="snake")snakeOpen()}));
 $$("[data-close]").forEach(b=>b.addEventListener("click",()=>closeWin(b.closest(".win"))));
 $$(".win").forEach(w=>{
   w.addEventListener("pointerdown",()=>front(w));
@@ -491,12 +512,6 @@ async function boot(){
   await Promise.all([wallDone,sfxDone,musicDone,pageDone,fontsDone,wait(500)]);
   shown=100;paint();
   await wait(200);
-  if(tracks.length&&audio.paused){   // browser blocked sound: wait for one click, which also starts the music
-    $("#boot span").textContent="click to turn on";
-    $("#boot b").style.display="none";
-    await new Promise(r=>["pointerdown","keydown"].forEach(ev=>addEventListener(ev,r,{once:true})));
-    if(audio.paused)play(0);
-  }
   $("#boot").classList.add("hide");
   wall.play().catch(()=>{});
   const d=TV_TIME;
@@ -506,6 +521,89 @@ async function boot(){
   const later=(f,sec)=>sec>0?setTimeout(f,sec*1000):f();
   if(SFX_OFFSET>=0){go();later(ring,SFX_OFFSET)}else{ring();later(go,-SFX_OFFSET)}
 }
+// ---- SNAKE ----
+const SN={n:20,c:16,snake:[],dir:[1,0],q:[],food:null,score:0,best:0,state:"ready",t:null,win:false};
+try{SN.best=+localStorage.getItem("snakeBest")||0}catch(e){}
+const sc=$("#sc"),sx=sc.getContext("2d");
+const snakeSpeed=()=>Math.max(65,125-SN.score*3);   // ms per step, gets faster as you eat
+function snakeReset(){
+  const m=SN.n>>1;
+  SN.snake=[[m,m],[m-1,m],[m-2,m]];SN.dir=[1,0];SN.q=[];SN.score=0;SN.state="ready";SN.win=false;
+  clearInterval(SN.t);snakeFood();snakeHud();snakeDraw();
+}
+function snakeFood(){
+  const free=[];
+  for(let x=0;x<SN.n;x++)for(let y=0;y<SN.n;y++)if(!SN.snake.some(s=>s[0]===x&&s[1]===y))free.push([x,y]);
+  SN.food=free.length?free[Math.floor(Math.random()*free.length)]:null;
+}
+function snakeHud(){$("#sScore").textContent=SN.score;$("#sBest").textContent=SN.best}
+function snakeOpen(){if(document.activeElement&&document.activeElement.blur)document.activeElement.blur();snakeDraw()}
+function snakeStart(){
+  if(SN.state==="over")snakeReset();
+  if(SN.state==="running")return;
+  SN.state="running";clearInterval(SN.t);SN.t=setInterval(snakeStep,snakeSpeed());snakeDraw();
+}
+function snakePause(){if(SN.state!=="running")return;SN.state="paused";clearInterval(SN.t);snakeDraw()}
+function snakeToggle(){SN.state==="running"?snakePause():snakeStart()}
+function snakeTurn(dx,dy){
+  const last=SN.q.length?SN.q[SN.q.length-1]:SN.dir;
+  if((last[0]===-dx&&last[1]===-dy)||(last[0]===dx&&last[1]===dy)||SN.q.length>=2)return;
+  SN.q.push([dx,dy]);
+}
+function snakeStep(){
+  if(SN.q.length)SN.dir=SN.q.shift();
+  const h=SN.snake[0],nx=h[0]+SN.dir[0],ny=h[1]+SN.dir[1];
+  const eat=SN.food&&nx===SN.food[0]&&ny===SN.food[1];
+  const body=eat?SN.snake:SN.snake.slice(0,-1);
+  if(nx<0||ny<0||nx>=SN.n||ny>=SN.n||body.some(s=>s[0]===nx&&s[1]===ny))return snakeOver(false);
+  SN.snake.unshift([nx,ny]);
+  if(eat){
+    SN.score++;
+    if(SN.score>SN.best){SN.best=SN.score;try{localStorage.setItem("snakeBest",SN.best)}catch(e){}}
+    uiPlay("hover");snakeFood();snakeHud();
+    clearInterval(SN.t);SN.t=setInterval(snakeStep,snakeSpeed());
+    if(!SN.food){snakeDraw();return snakeOver(true)}
+  }else SN.snake.pop();
+  snakeDraw();
+}
+function snakeOver(win){SN.state="over";SN.win=win;clearInterval(SN.t);uiPlay("window-close");snakeDraw()}
+function snakeDraw(){
+  const c=SN.c,W=SN.n*c;
+  sx.fillStyle="#1d0f06";sx.fillRect(0,0,W,W);
+  sx.fillStyle="rgba(241,220,182,.05)";
+  for(let i=1;i<SN.n;i++){sx.fillRect(i*c,0,1,W);sx.fillRect(0,i*c,W,1)}
+  if(SN.food){const f=SN.food[0]*c,g=SN.food[1]*c;sx.fillStyle="#c8402a";sx.fillRect(f+2,g+2,c-4,c-4);sx.fillStyle="#f1dcb6";sx.fillRect(f+4,g+4,2,2)}
+  SN.snake.forEach((s,k)=>{sx.fillStyle=k?"#e6c48f":"#e8b83a";sx.fillRect(s[0]*c+1,s[1]*c+1,c-2,c-2)});
+  const msg=SN.state==="ready"?["snake","space / click to start"]
+    :SN.state==="paused"?["paused","space / click to continue"]
+    :SN.state==="over"?[SN.win?"you win":"game over","space / click to retry"]:null;
+  if(msg){
+    sx.fillStyle="rgba(20,8,0,.72)";sx.fillRect(0,0,W,W);sx.textAlign="center";
+    sx.fillStyle="#f1dcb6";sx.font="28px DotGothic16,monospace";sx.fillText(msg[0],W/2,W/2-6);
+    sx.fillStyle="#dc8a3e";sx.font="14px DotGothic16,monospace";sx.fillText(msg[1],W/2,W/2+20);
+  }
+}
+const SK={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0],w:[0,-1],s:[0,1],a:[-1,0],d:[1,0]};
+document.addEventListener("keydown",e=>{
+  const w=$("#snake");if(!w.classList.contains("open")||w.classList.contains("closing"))return;
+  if(e.code==="Space"){e.preventDefault();if(!e.repeat)snakeToggle();return}
+  const d=SK[e.key.length===1?e.key.toLowerCase():e.key];
+  if(!d)return;
+  e.preventDefault();
+  if(SN.state!=="running")snakeStart();
+  snakeTurn(d[0],d[1]);
+});
+let snakePt=null;   // click = start/pause, swipe = turn (touch friendly)
+sc.addEventListener("pointerdown",e=>{snakePt=[e.clientX,e.clientY]});
+sc.addEventListener("pointerup",e=>{
+  if(!snakePt)return;
+  const dx=e.clientX-snakePt[0],dy=e.clientY-snakePt[1];snakePt=null;
+  if(Math.abs(dx)<24&&Math.abs(dy)<24){snakeToggle();return}
+  if(SN.state!=="running")snakeStart();
+  Math.abs(dx)>Math.abs(dy)?snakeTurn(dx>0?1:-1,0):snakeTurn(0,dy>0?1:-1);
+});
+snakeReset();
+
 // ---- CRT CURSOR + MOUSE PARALLAX ----
 (function(){
   const fine=matchMedia("(pointer:fine)").matches,reduce=matchMedia("(prefers-reduced-motion:reduce)").matches;
