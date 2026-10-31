@@ -390,7 +390,7 @@ const wait=(ms,v)=>new Promise(r=>setTimeout(()=>r(v),ms));
 const SFX_FILES=["sfx/turn-on.mp3","turn-on.mp3","turnon.mp3","turnon.mp4","turnon.wav","turnon.ogg","sfx/tv-on.mp3"]; // first one that exists is used
 const TV_TIME=0.9;            // seconds the turn-on animation lasts (smaller = faster)
 const SFX_OFFSET=TV_TIME*0.5; // sound hits exactly when the screen pops open (halfway through the animation).        // seconds. + = sound starts later than the animation, - = sound starts first
-const sfx=new Audio();sfx.preload="auto";sfx.volume=0.15; // 0.35 = 35% volume
+const sfx=new Audio();sfx.preload="auto";sfx.volume=0.10; // 0.10 = 10% volume
 
 // ---- SFX EQUALIZER (settings from the 10-band graphic EQ) ----
 const SFX_PREAMP=0; // dB. If the +12 dB bass clips, try -6
@@ -402,6 +402,7 @@ function initSfxEq(){
   sac=new AC();
   const src=sac.createMediaElementSource(sfx);
   const pre=sac.createGain();pre.gain.value=Math.pow(10,SFX_PREAMP/20);
+  sfxIn=pre;
   src.connect(pre);
   let node=pre;
   SFX_EQ.forEach(([f,g],k)=>{
@@ -411,7 +412,30 @@ function initSfxEq(){
     node.connect(b);node=b;
   });
   node.connect(sac.destination);
+  loadUi();
 }
+
+// ---- UI SOUNDS: hover + click (sfx/hover.mp3, sfx/click.mp3) ----
+const UI_VOL=0.10;   // 0.10 = 10% volume
+const UI_EQ=false;   // true = also run hover/click through the EQ above (the +12 dB bass makes them boomy)
+const UI_SEL=".icon,.dot,.card,.mail,.x,#disc,#next";
+const uiBuf={};let sfxIn=null;
+function loadUi(){
+  ["hover","click"].forEach(n=>fetch("sfx/"+n+".mp3").then(r=>r.ok?r.arrayBuffer():Promise.reject()).then(b=>sac.decodeAudioData(b)).then(d=>uiBuf[n]=d).catch(()=>{}));
+}
+function uiPlay(n){
+  if(!sac||!uiBuf[n])return;
+  if(sac.state==="suspended")sac.resume();
+  const s=sac.createBufferSource(),g=sac.createGain();
+  s.buffer=uiBuf[n];g.gain.value=UI_VOL;
+  s.connect(g);g.connect(UI_EQ&&sfxIn?sfxIn:sac.destination);s.start();
+}
+document.addEventListener("pointerover",e=>{
+  if(e.pointerType==="touch")return;
+  const t=e.target.closest&&e.target.closest(UI_SEL);
+  if(t&&!t.contains(e.relatedTarget))uiPlay("hover");
+});
+document.addEventListener("click",e=>{if(e.target.closest&&e.target.closest(UI_SEL))uiPlay("click")});
 
 const prog={},flags={page:0,fonts:0};let shown=0;
 function paint(){
