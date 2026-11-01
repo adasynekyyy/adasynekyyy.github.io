@@ -431,16 +431,19 @@ async function findTracks(){
     const src=urls[ok.indexOf(true)];
     if(!src){if(n===1)console.log("not found:",...urls);break}
     tracks.push({src,...(info[n]||{title:"music "+n,artist:"unknown artist"})});
-    if(tracks.length===1){show(0);firstReady=getBlob("music",src).then(u=>{if(u)tracks[0].src=u;audio.preload="auto";start(0).catch(()=>{})});firstResolve(firstReady)}
   }
-  if(!tracks.length){prog.music.done=true;paint();box.classList.remove("wait");$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3";firstResolve()}
+  if(!tracks.length){prog.music.done=true;paint();box.classList.remove("wait");$("#tName").textContent="no music yet";$("#tArtist").textContent="add music1.mp3";firstResolve();return}
+  const r=Math.floor(Math.random()*tracks.length);   // random starting track
+  show(r);
+  firstReady=getBlob("music",tracks[r].src).then(u=>{if(u)tracks[r].src=u;audio.preload="auto";start(r).catch(()=>{})});
+  firstResolve(firstReady);
 }
 function show(n){i=(n+tracks.length)%tracks.length;const t=tracks[i];$("#tName").textContent=t.title;$("#tArtist").textContent=t.artist}
 function start(n){show(n);audio.volume=0;if(audio.getAttribute("src")!==tracks[i].src)audio.src=tracks[i].src;return audio.play()}
 function play(n){if(tracks.length)start(n).catch(()=>{})}
 function toggle(){
   if(!tracks.length)return;
-  if(!audio.src)return play(0);
+  if(!audio.src)return play(i);
   if(audio.paused){userPaused=false;audio.play().catch(()=>{})}else{userPaused=true;fadeThen(()=>audio.pause())}
 }
 audio.addEventListener("play",()=>{initFx();hiss(true);box.classList.add("on");box.classList.remove("wait");started=true;t0=sec();outAt=afterOut=null;requestAnimationFrame(tick);["pointerdown","pointerup","keydown"].forEach(ev=>removeEventListener(ev,kick))});
@@ -450,7 +453,7 @@ audio.addEventListener("timeupdate",()=>{$("#fill").style.width=(audio.duration?
 $("#disc").addEventListener("click",toggle);
 $("#next").addEventListener("click",()=>fadeThen(()=>play(i+1)));
 // if the browser blocks sound at load, the first click or key press anywhere starts the music
-function kick(e){if(started||!tracks.length||e.target.closest("#music"))return;play(0)}
+function kick(e){if(started||!tracks.length||e.target.closest("#music"))return;play(i)}
 ["pointerdown","pointerup","keydown"].forEach(ev=>addEventListener(ev,kick));
 
 // boot: the loading screen counts the real bytes of the big files (wallpaper, sound, first song)
